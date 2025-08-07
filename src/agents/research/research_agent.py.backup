@@ -1,0 +1,286 @@
+"""
+Research Agent - DuckDuckGo Search 기반 웹 검색 RAG
+
+SerpAPI 제거, ddgs (DuckDuckGo Search)만 사용하는 순수 Python 기반 Research Agent
+"""
+
+import asyncio
+import logging
+from typing import List, Dict, Any, Optional
+from datetime import datetime, timedelta
+from functools import lru_cache
+
+from ddgs import DDGS
+from ddgs.exceptions import DDGSException, RatelimitException, TimeoutException
+
+from server.schemas.agents import ResearchIn, ResearchOut
+
+logger = logging.getLogger(__name__)
+
+
+class ResearchAgent:
+    """
+    DuckDuckGo Search 기반 Research Agent
+    
+    API 키가 필요하지 않은 ddgs 라이브러리를 사용하여 웹 검색 수행
+    """
+    
+    def __init__(self, 
+                 timeout: int = 10,
+                 max_results_per_query: int = 10,
+                 cache_size: int = 128,
+                 retry_attempts: int = 3):
+        """
+        Research Agent 초기화
+        
+        Args:
+            timeout: 검색 요청 타임아웃 (초)
+            max_results_per_query: 쿼리당 최대 결과 수
+            cache_size: LRU 캐시 크기
+            retry_attempts: 재시도 횟수
+        """
+        self.timeout = timeout
+        self.max_results_per_query = max_results_per_query
+        self.retry_attempts = retry_attempts
+        
+        # DDGS 클라이언트 초기화
+        self.ddgs = DDGS(timeout=timeout, verify=True)
+        
+        logger.info(f"ResearchAgent 초기화 완료 (timeout={timeout}s, max_results={max_results_per_query})")
+    
+    @lru_cache(maxsize=128)
+    def _cached_search(self, query: str, region: str = "wt-wt") -> List[Dict[str, Any]]:
+        """
+        캐시된 검색 (LRU Cache 적용)
+        
+        Args:
+            query: 검색 쿼리
+            region: 검색 지역 코드
+            
+        Returns:
+            검색 결과 리스트
+        """
+        return self._perform_search(query, region)
+    
+    def _perform_search(self, query: str, region: str = "wt-wt") -> List[Dict[str, Any]]:
+        """
+        실제 DuckDuckGo 검색 수행
+        
+        Args:
+            query: 검색 쿼리
+            region: 검색 지역 코드 (기본값: wt-wt - 전 세계)
+            
+        Returns:
+            검색 결과 리스트
+        """
+        for attempt in range(self.retry_attempts):
+            try:
+                logger.debug(f"DuckDuckGo 검색 시도 {attempt + 1}/{self.retry_attempts}: '{query}'")
+                
+                results = self.ddgs.text(
+                    query,  # 첫 번째 위치 인자
+                    region=region,
+                    safesearch="moderate",
+                    timelimit=None,  # 시간 제한 없음
+                    max_results=self.max_results_per_query
+                )
+                
+                logger.info(f"검색 성공: '{query}' - {len(results)}개 결과")
+                return results
+                
+            except RatelimitException as e:
+                logger.warning(f"Rate limit 도달 (시도 {attempt + 1}): {e}")
+                if attempt < self.retry_attempts - 1:
+                    # 지수 백오프 적용
+                    wait_time = 2 ** attempt
+                    logger.info(f"{wait_time}초 대기 후 재시도...")
+                    asyncio.sleep(wait_time)
+                else:
+                    raise
+                    
+            except TimeoutException as e:
+                logger.warning(f"검색 타임아웃 (시도 {attempt + 1}): {e}")
+                if attempt < self.retry_attempts - 1:
+                    continue
+                else:
+                    raise
+                    
+            except DDGSException as e:
+                logger.error(f"DuckDuckGo 검색 오류 (시도 {attempt + 1}): {e}")
+                if attempt < self.retry_attempts - 1:
+                    continue
+                else:
+                    raise
+                    
+            except Exception as e:
+                logger.error(f"예상치 못한 오류 (시도 {attempt + 1}): {e}")
+                if attempt < self.retry_attempts - 1:
+                    continue
+                else:
+                    raise
+        
+        return []  # 모든 시도 실패시 빈 리스트 반환
+    
+    def _convert_to_docs(self, search_results: List[Dict[str, Any]], query: str) -> tuple[List[str], List[Dict[str, Any]]]:
+        """
+        DuckDuckGo 검색 결과를 ResearchOut 형식으로 변환
+        
+        Args:
+            search_results: DuckDuckGo 검색 결과
+            query: 원본 검색 쿼리
+            
+        Returns:
+            (docs, metadata) 튜플 - docs는 문서 내용 리스트, metadata는 메타데이터 리스트
+        """
+        docs = []
+        metadata = []
+        
+        for i, result in enumerate(search_results):
+            try:
+                # DuckDuckGo 결과 구조: {title, href, body}
+                title = result.get('title', '').strip()
+                body = result.get('body', '').strip()
+                url = result.get('href', '')
+                
+                # 문서 내용 (제목 + 본문)
+                doc_content = f"{title}\n\n{body}".strip()
+                docs.append(doc_content)
+                
+                # 메타데이터
+                doc_metadata = {
+                    'title': title,
+                    'url': url,
+                    'source': 'duckduckgo',
+                    'search_query': query,
+                    'search_rank': i + 1,
+                    'timestamp': datetime.now().isoformat()
+                }
+                metadata.append(doc_metadata)
+                
+            except Exception as e:
+                logger.warning(f"검색 결과 변환 중 오류 (인덱스 {i}): {e}")
+                continue
+        
+        logger.info(f"{len(docs)}개 문서로 변환 완료")
+        return docs, metadata
+    
+    async def search(self, input_data: ResearchIn) -> ResearchOut:
+        """
+        비동기 검색 수행 (메인 인터페이스)
+        
+        Args:
+            input_data: 검색 입력 데이터
+            
+        Returns:
+            검색 결과 출력 데이터
+        """
+        logger.info(f"Research Agent 검색 시작: '{input_data.keyword}'")
+        start_time = datetime.now()
+        
+        try:
+            # 동기 검색을 비동기로 실행
+            loop = asyncio.get_event_loop()
+            search_results = await loop.run_in_executor(
+                None, 
+                self._cached_search, 
+                input_data.keyword,
+                getattr(input_data, 'region', 'wt-wt')
+            )
+            
+            # ResearchOut 형식으로 변환
+            docs, metadata = self._convert_to_docs(search_results, input_data.keyword)
+            
+            # 검색 성공
+            end_time = datetime.now()
+            processing_time = (end_time - start_time).total_seconds()
+            
+            result = ResearchOut(
+                docs=docs,
+                metadata=metadata,
+                cache_hit=False,  # 실제 구현에서는 캐시 히트 여부 확인
+                processing_time=processing_time
+            )
+            
+            logger.info(f"검색 완료: {len(docs)}개 문서, {processing_time:.2f}초 소요")
+            return result
+            
+        except Exception as e:
+            # 검색 실패
+            end_time = datetime.now()
+            processing_time = (end_time - start_time).total_seconds()
+            
+            logger.error(f"검색 실패: {e}")
+            
+            return ResearchOut(
+                docs=[],
+                metadata=[{
+                    'error': str(e),
+                    'error_type': type(e).__name__,
+                    'search_engine': 'duckduckgo',
+                    'region': getattr(input_data, 'region', 'wt-wt')
+                }],
+                cache_hit=False,
+                processing_time=processing_time
+            )
+    
+    def clear_cache(self) -> None:
+        """LRU 캐시 정리"""
+        self._cached_search.cache_clear()
+        logger.info("Research Agent 캐시 정리 완료")
+    
+    def get_cache_info(self) -> Dict[str, Any]:
+        """캐시 정보 반환"""
+        cache_info = self._cached_search.cache_info()
+        return {
+            'hits': cache_info.hits,
+            'misses': cache_info.misses,
+            'maxsize': cache_info.maxsize,
+            'currsize': cache_info.currsize,
+            'hit_rate': cache_info.hits / (cache_info.hits + cache_info.misses) if (cache_info.hits + cache_info.misses) > 0 else 0
+        }
+    
+    def health_check(self) -> Dict[str, Any]:
+        """Research Agent 상태 확인"""
+        try:
+            # 간단한 테스트 검색
+            test_results = self._perform_search("test", "wt-wt")
+            cache_info = self.get_cache_info()
+            
+            return {
+                'status': 'healthy',
+                'search_engine': 'duckduckgo',
+                'api_key_required': False,
+                'last_test': datetime.now().isoformat(),
+                'test_results_count': len(test_results),
+                'cache_info': cache_info,
+                'config': {
+                    'timeout': self.timeout,
+                    'max_results_per_query': self.max_results_per_query,
+                    'retry_attempts': self.retry_attempts
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'status': 'unhealthy',
+                'error': str(e),
+                'error_type': type(e).__name__,
+                'last_test': datetime.now().isoformat()
+            }
+
+
+# Research Agent 인스턴스 (싱글톤 패턴)
+research_agent = ResearchAgent()
+
+
+async def research_search(input_data: ResearchIn) -> ResearchOut:
+    """
+    Research Agent 검색 함수 (외부 인터페이스)
+    
+    Args:
+        input_data: 검색 입력 데이터
+        
+    Returns:
+        검색 결과 출력 데이터
+    """
+    return await research_agent.search(input_data)
