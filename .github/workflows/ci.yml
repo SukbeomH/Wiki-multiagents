@@ -1,0 +1,332 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # 코드 품질 검사
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality Check
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 server/ app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 server/ app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Type check with mypy
+      run: |
+        mypy server/ app/ --ignore-missing-imports || true
+
+    - name: Format check with black
+      run: |
+        black --check server/ app/ tests/
+
+    - name: Import sort check with isort
+      run: |
+        isort --check-only server/ app/ tests/
+
+    - name: Security check with bandit
+      run: |
+        bandit -r server/ app/ -f json -o bandit-report.json || true
+
+    - name: Upload security report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-report
+        path: bandit-report.json
+
+  # 단위 테스트
+  unit-tests:
+    runs-on: ubuntu-latest
+    name: Unit Tests
+    needs: code-quality
+
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements*.txt') }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Run unit tests
+      env:
+        TESTING: true
+        MOCK_AZURE_OPENAI_KEY: test_key
+        # MOCK_SERPAPI_KEY: test_key  # SerpAPI 제거
+      run: |
+        pytest tests/unit -v --cov=server --cov=app --cov-report=xml --cov-report=html --junit-xml=junit.xml
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: unit-test-results-${{ matrix.python-version }}
+        path: |
+          junit.xml
+          htmlcov/
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  # 통합 테스트
+  integration-tests:
+    runs-on: ubuntu-latest
+    name: Integration Tests
+    needs: unit-tests
+
+    services:
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Wait for services
+      run: |
+        sleep 30  # 서비스 초기화 대기
+
+    - name: Run integration tests
+      env:
+        TESTING: true
+        RDFLIB_STORE_URI: sqlite:///./test_kg.db
+        RDFLIB_GRAPH_IDENTIFIER: test_kg
+        RDFLIB_NAMESPACE_PREFIX: http://example.org/kg/
+        REDIS_URL: redis://localhost:6379
+        MOCK_AZURE_OPENAI_KEY: test_key
+        # MOCK_SERPAPI_KEY: test_key  # SerpAPI 제거
+      run: |
+        pytest tests/integration -v --junit-xml=integration-junit.xml
+
+    - name: Upload integration test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: integration-test-results
+        path: integration-junit.xml
+
+  # Docker 빌드 테스트
+  docker-build:
+    runs-on: ubuntu-latest
+    name: Docker Build Test
+    needs: code-quality
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Streamlit image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./app/Dockerfile
+        push: false
+        tags: kg-system-streamlit:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build FastAPI image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./server/Dockerfile
+        push: false
+        tags: kg-system-fastapi:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test Docker Compose
+      run: |
+        # 환경변수 파일 생성
+        cp config/environment.template .env
+        # 테스트용 값으로 설정
+        sed -i 's/your_azure_openai_api_key_here/test_key/' .env
+        # sed -i 's/your_serpapi_key_here/test_key/' .env  # SerpAPI 제거
+        
+        # Docker Compose 구문 검증
+        docker-compose -f infra/docker-compose.yml config
+
+  # E2E 테스트 (조건부)
+  e2e-tests:
+    runs-on: ubuntu-latest
+    name: E2E Tests
+    needs: [integration-tests, docker-build]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Run E2E tests
+      env:
+        TESTING: true
+        MOCK_AZURE_OPENAI_KEY: test_key
+        # MOCK_SERPAPI_KEY: test_key  # SerpAPI 제거
+      run: |
+        pytest tests/e2e -v --junit-xml=e2e-junit.xml -m "not slow"
+
+    - name: Upload E2E test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: e2e-test-results
+        path: e2e-junit.xml
+
+  # 보안 스캔
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scan
+    needs: code-quality
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # 의존성 검사
+  dependency-check:
+    runs-on: ubuntu-latest
+    name: Dependency Check
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install safety
+      run: pip install safety
+
+    - name: Check dependencies
+      run: |
+        safety check -r requirements.txt --json --output safety-report.json || true
+
+    - name: Upload dependency report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: dependency-report
+        path: safety-report.json
+
+  # 테스트 결과 요약
+  test-summary:
+    runs-on: ubuntu-latest
+    name: Test Summary
+    needs: [unit-tests, integration-tests, e2e-tests]
+    if: always()
+
+    steps:
+    - name: Download all test results
+      uses: actions/download-artifact@v3
+
+    - name: Publish test results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Test Results
+        path: '**/*junit.xml'
+        reporter: java-junit
+        fail-on-error: true

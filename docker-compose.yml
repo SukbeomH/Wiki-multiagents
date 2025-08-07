@@ -1,0 +1,9 @@
+# AI Knowledge Graph System - Development Environment
+# 
+# 전체 개발 환경을 시작하려면:
+#   docker-compose up -d
+#
+# 참고: Redis는 diskcache로 대체되어 더 이상 필요하지 않습니다
+
+include:
+  - infra/docker-compose.yml
