@@ -1,0 +1,40 @@
+# {{ title }}
+
+{% if metadata.author %}
+**작성자**: {{ metadata.author }}
+{% endif %}
+
+{% if metadata.created_at %}
+**작성일**: {{ metadata.created_at }}
+{% endif %}
+
+{% if metadata.version %}
+**버전**: {{ metadata.version }}
+{% endif %}
+
+{% if metadata.tags %}
+**태그**: {% for tag in metadata.tags %}`{{ tag }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+
+---
+
+{{ content }}
+
+---
+
+{% if metadata.categories %}
+**카테고리**: {% for category in metadata.categories %}`{{ category }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+
+{% if metadata.related_pages %}
+## 관련 페이지
+
+{% for page in metadata.related_pages %}
+- [{{ page.title }}]({{ page.url }})
+{% endfor %}
+{% endif %}
+
+{% if metadata.footer %}
+---
+{{ metadata.footer }}
+{% endif %} 

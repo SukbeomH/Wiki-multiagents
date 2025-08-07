@@ -1,0 +1,135 @@
+# =============================================================================
+# AI Knowledge Graph System - Environment Variables Template
+# =============================================================================
+# Copy this file to .env in the project root and fill in your actual values
+# Never commit .env file to version control!
+
+# =============================================================================
+# Azure OpenAI Configuration
+# =============================================================================
+AZURE_OPENAI_ENDPOINT=https://test-fake-endpoint.openai.azure.com/
+AZURE_OPENAI_API_KEY=sk-test-fake-key-1234567890-whateva
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+
+# Azure OpenAI Deployment Names
+AZURE_OPENAI_DEPLOY_GPT4O_MINI=gpt-4o-mini
+AZURE_OPENAI_DEPLOY_GPT4O=gpt-4o
+AZURE_OPENAI_DEPLOY_EMBED_3_LARGE=text-embedding-3-large
+AZURE_OPENAI_DEPLOY_EMBED_3_SMALL=text-embedding-3-small
+AZURE_OPENAI_DEPLOY_EMBED_ADA=text-embedding-ada-002
+
+# =============================================================================
+# Search APIs Configuration  
+# =============================================================================
+# SerpAPI 제거 (API 키 불필요한 DuckDuckGo만 사용)
+# SERPAPI_KEY=your_serpapi_key_here
+# DuckDuckGo는 API 키가 필요하지 않음 (무료 사용 가능)
+
+# =============================================================================
+# Database Configuration
+# =============================================================================
+# RDFLib Knowledge Graph Database (Neo4j 대체)
+RDFLIB_STORE_URI=sqlite:///./data/kg.db
+RDFLIB_GRAPH_IDENTIFIER=kg
+RDFLIB_NAMESPACE_PREFIX=http://example.org/kg/
+
+# Cache & State Management (Redis 완전 대체)
+# diskcache 설정
+CACHE_DIR=./data/cache
+CACHE_MAX_SIZE=1073741824
+CACHE_EVICTION_POLICY=least-recently-used
+CACHE_DEFAULT_TTL=86400
+CACHE_CHECKPOINT_TTL=604800
+
+# filelock 분산 락 설정
+LOCK_DIR=./data/locks
+
+# =============================================================================
+# Vector Store Configuration
+# =============================================================================
+# FAISS Configuration
+FAISS_INDEX_PATH=./data/faiss_index
+FAISS_DIMENSION=4096
+FAISS_NLIST=256
+FAISS_NPROBE=16
+
+# =============================================================================
+# Slack Integration
+# =============================================================================
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
+SLACK_CHANNEL_KG_REVIEW=#kg-review
+SLACK_CHANNEL_ALERTS=#alerts
+
+# =============================================================================
+# Authentication & Security
+# =============================================================================
+# JWT Configuration
+JWT_SECRET_KEY=your_super_secret_jwt_key_here_min_32_chars
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# OAuth2 Configuration (if using OAuth proxy)
+OAUTH2_CLIENT_ID=your_oauth2_client_id
+OAUTH2_CLIENT_SECRET=your_oauth2_client_secret
+OAUTH2_REDIRECT_URI=http://localhost:8501/auth/callback
+
+# =============================================================================
+# Application Configuration
+# =============================================================================
+# Environment
+APP_ENV=development
+DEBUG=true
+LOG_LEVEL=INFO
+
+# API Configuration
+API_BASE_URL=http://localhost:8000
+STREAMLIT_BASE_URL=http://localhost:8501
+
+# Rate Limiting
+API_RATE_LIMIT=100
+API_RATE_LIMIT_WINDOW=60
+
+# =============================================================================
+# Workflow Configuration
+# =============================================================================
+# Retry Configuration
+RETRY_MAX_ATTEMPTS=3
+RETRY_BASE_DELAY=1
+RETRY_BACKOFF_MULTIPLIER=2
+RETRY_JITTER_PERCENT=20
+
+# Checkpoint Configuration (diskcache 기반)
+CHECKPOINT_INTERVAL_SECONDS=60
+CHECKPOINT_KEY_PREFIX=kg_checkpoint:
+
+# =============================================================================
+# Agent Configuration
+# =============================================================================
+# Research Agent
+RESEARCH_TOP_K_DOCS=10
+RESEARCH_CACHE_TTL=3600
+
+# Extractor Agent
+EXTRACTOR_CONFIDENCE_THRESHOLD=0.7
+EXTRACTOR_MAX_ENTITIES=100
+
+# Retriever Agent  
+RETRIEVER_TOP_K=5
+RETRIEVER_SIMILARITY_THRESHOLD=0.8
+
+# =============================================================================
+# Development & Testing
+# =============================================================================
+# Test Configuration
+TEST_DATABASE_URL=sqlite:///./test.db
+TEST_RDFLIB_STORE_URI=sqlite:///./test_kg.db
+TEST_CACHE_DIR=./test_data/cache
+TEST_LOCK_DIR=./test_data/locks
+
+# Mock API Keys for Testing (DO NOT use in production)
+MOCK_AZURE_OPENAI_KEY=test_key_for_development
+# SerpAPI 테스트 키 제거 (DuckDuckGo만 사용)
+# MOCK_SERPAPI_KEY=test_serpapi_key
+
+
