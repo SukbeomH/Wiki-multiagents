@@ -54,6 +54,9 @@ class FeedbackStatisticsResponse(BaseModel):
     generated_at: str
 
 
+
+
+
 @router.post("/submit", response_model=FeedbackOut)
 async def submit_feedback(request: FeedbackSubmitRequest):
     """피드백 제출"""
@@ -76,31 +79,7 @@ async def submit_feedback(request: FeedbackSubmitRequest):
         raise HTTPException(status_code=500, detail=f"피드백 제출 실패: {str(e)}")
 
 
-@router.get("/{feedback_id}", response_model=FeedbackResponse)
-async def get_feedback(feedback_id: str):
-    """특정 피드백 조회"""
-    try:
-        feedback = feedback_agent.get_feedback(feedback_id)
-        
-        if not feedback:
-            raise HTTPException(status_code=404, detail="피드백을 찾을 수 없습니다")
-        
-        return FeedbackResponse(
-            feedback_id=feedback.id,
-            workflow_id=feedback.workflow_id,
-            user_id=feedback.user_id,
-            feedback_type=feedback.feedback_type,
-            content=feedback.content,
-            rating=feedback.rating,
-            status=feedback.status,
-            created_at=feedback.created_at.isoformat(),
-            processed_at=feedback.processed_at.isoformat() if feedback.processed_at else None
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"피드백 조회 실패: {str(e)}")
+
 
 
 @router.get("/", response_model=FeedbackListResponse)
@@ -166,7 +145,14 @@ async def get_feedback_statistics():
     try:
         stats = feedback_agent.get_feedback_statistics()
         
-        return FeedbackStatisticsResponse(**stats)
+        # 실제 반환값과 스키마 매칭
+        return FeedbackStatisticsResponse(
+            total_feedback=stats.get("total_feedback", 0),
+            status_counts=stats.get("status_counts", {}),
+            rating_counts=stats.get("rating_counts", {}),
+            recent_feedback=stats.get("recent_feedback", 0),
+            generated_at=stats.get("generated_at", "")
+        )
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"피드백 통계 조회 실패: {str(e)}")
@@ -177,6 +163,34 @@ async def health_check():
     """피드백 서비스 상태 확인"""
     try:
         health_info = feedback_agent.health_check()
+        # health_info는 dict이므로 그대로 반환 (스키마 검증 없음)
         return health_info
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"상태 확인 실패: {str(e)}")
+
+
+@router.get("/{feedback_id}", response_model=FeedbackResponse)
+async def get_feedback(feedback_id: str):
+    """특정 피드백 조회"""
+    try:
+        feedback = feedback_agent.get_feedback(feedback_id)
+        
+        if not feedback:
+            raise HTTPException(status_code=404, detail="피드백을 찾을 수 없습니다")
+        
+        return FeedbackResponse(
+            feedback_id=feedback.id,
+            workflow_id=feedback.workflow_id,
+            user_id=feedback.user_id,
+            feedback_type=feedback.feedback_type,
+            content=feedback.content,
+            rating=feedback.rating,
+            status=feedback.status,
+            created_at=feedback.created_at.isoformat(),
+            processed_at=feedback.processed_at.isoformat() if feedback.processed_at else None
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"피드백 조회 실패: {str(e)}")

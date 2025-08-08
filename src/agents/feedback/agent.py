@@ -341,12 +341,12 @@ class FeedbackAgent:
         try:
             # 피드백 아이템 생성
             feedback_item = FeedbackItem(
-                id=input_data.feedback_id,
-                workflow_id=input_data.workflow_id,
+                id=input_data.node_id,  # node_id를 feedback_id로 사용
+                workflow_id=input_data.node_id,  # node_id를 workflow_id로 사용
                 user_id=input_data.user_id,
                 feedback_type=input_data.feedback_type,
-                content=input_data.content,
-                rating=input_data.rating,
+                content=input_data.feedback,  # feedback 필드 사용
+                rating=None,  # FeedbackIn에는 rating이 없음
                 status="pending"
             )
             
@@ -365,21 +365,19 @@ class FeedbackAgent:
                 logger.info(f"Feedback processed: {feedback_item.id} -> {new_status}")
                 
                 result = FeedbackOut(
+                    acknowledged=True,
                     feedback_id=feedback_item.id,
-                    workflow_id=feedback_item.workflow_id,
-                    status=new_status,
-                    message=f"Feedback {new_status} successfully",
-                    processed_at=datetime.now().isoformat(),
-                    statistics=self.get_feedback_statistics()
+                    processing_status=new_status,
+                    estimated_impact={"priority": "medium", "affected_components": ["workflow"]},
+                    requires_human_review=False
                 )
             else:
                 result = FeedbackOut(
+                    acknowledged=False,
                     feedback_id=feedback_item.id,
-                    workflow_id=feedback_item.workflow_id,
-                    status="failed",
-                    message="Failed to submit feedback",
-                    processed_at=datetime.now().isoformat(),
-                    statistics=self.get_feedback_statistics()
+                    processing_status="failed",
+                    estimated_impact={"priority": "low", "affected_components": []},
+                    requires_human_review=True
                 )
             
             logger.info(f"Feedback processing completed: {feedback_item.id}")
@@ -390,12 +388,11 @@ class FeedbackAgent:
             
             # 오류 시에도 유효한 결과 반환
             return FeedbackOut(
-                feedback_id=input_data.feedback_id,
-                workflow_id=input_data.workflow_id,
-                status="failed",
-                message=f"Processing error: {str(e)}",
-                processed_at=datetime.now().isoformat(),
-                statistics=self.get_feedback_statistics()
+                acknowledged=False,
+                feedback_id=input_data.node_id,  # node_id를 feedback_id로 사용
+                processing_status="failed",
+                estimated_impact={"priority": "low", "affected_components": [], "error": str(e)},
+                requires_human_review=True
             )
     
     def _process_feedback(self, feedback_item: FeedbackItem) -> bool:

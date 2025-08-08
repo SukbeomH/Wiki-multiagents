@@ -24,6 +24,7 @@ app.include_router(history.router)
 app.include_router(workflow.router)
 app.include_router(checkpoints.router)
 app.include_router(retriever.router, prefix="/api/v1")
+# 피드백 라우터를 먼저 등록 (더 구체적인 경로가 먼저)
 app.include_router(feedback.router)
 
 
