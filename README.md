@@ -22,6 +22,49 @@
 - 🔄 **워크플로우 관리(단순화)**: LangGraph + filelock 락 + RetryManager(고정 지연) + CheckpointManager(롤백)
 - 💬 **피드백 루프(단순화)**: SQLite 저장 + 콘솔/파일 로깅 (Slack 제거)
 
+## 🖥️ 사용자 인터페이스
+
+### Knowledge Graph Wiki System UI
+
+PRD 요구사항에 맞는 **지식 그래프 기반 위키 시스템**을 제공합니다:
+
+#### 🎨 주요 UI 기능
+- **🔍 사이드바 검색**: 키워드 기반 지식 그래프 생성
+- **🧠 그래프 탭**: 인터랙티브 지식 그래프 시각화 (드래그·줌 지원)
+- **📚 위키 탭**: 자동 생성된 위키 문서 표시
+- **🌙 다크 모드**: 사용자 선호도에 따른 테마 전환
+- **📱 반응형 레이아웃**: 다양한 화면 크기에 최적화
+- **👤 RBAC 기반 권한**: 사용자 역할별 기능 제어
+
+#### 🚀 시스템 실행 방법
+
+```bash
+# 방법 1: 통합 스크립트로 실행 (권장)
+python start_system.py
+
+# 방법 2: 개별 서비스 실행
+# Terminal 1: FastAPI 서버
+uvicorn src.api.main:app --reload --port 8000 --host localhost
+
+# Terminal 2: Streamlit UI
+streamlit run src/ui/main.py --server.port 8501
+
+# 방법 3: Docker Compose로 실행
+docker-compose up
+
+# 방법 4: Make 명령어로 실행
+make docker-up
+```
+
+#### 🌐 접속 정보
+- **URL**: http://localhost:8501
+- **API 서버**: http://localhost:8000/api/v1
+
+#### 📋 사용자 역할
+- **user**: 읽기 전용 (그래프 및 위키 조회)
+- **editor**: 편집 권한 (피드백 제출 가능)
+- **admin**: 관리자 권한 (모든 기능 사용 가능)
+
 ## 🏗️ 아키텍처
 
 ### 에이전트 구성
@@ -39,7 +82,7 @@
 ### 기술 스택
 
 - **Backend**: FastAPI, Python 3.11+
-- **Frontend**: Streamlit, streamlit-agraph
+- **Frontend**: Streamlit, streamlit-agraph, Plotly
 - **AI/LLM**: spaCy, LangChain, LangGraph (LLM 선택사항)
 - **Database/Storage**: RDFLib + SQLite (지식 그래프), diskcache (캐시)
 - **Vector Store**: FAISS IVF-HNSW (4096차원)
@@ -97,16 +140,6 @@ make dev-setup
 
 # 의존성 설치
 make install-dev
-
-# 테스트 실행
-make test
-
-# 서비스 개별 시작
-# Terminal 1: FastAPI
-uvicorn src.api.main:app --reload --port 8000
-
-# Terminal 2: Streamlit
-API_BASE_URL=http://localhost:8000/api/v1 streamlit run app/main.py
 ```
 
 ## 🌐 서비스 접근

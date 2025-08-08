@@ -5,6 +5,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 dev-debug.log
+uvicorn.log
 
 # Dependency directories
 node_modules/
@@ -56,6 +57,13 @@ coverage.xml
 .pytype/
 *.db
 *.sqlite3
+history.db
+data/*.db
+data/cache/
+data/checkpoints/
+data/locks/
+data/vector_indices/
+data/workflows/
 
 .env
 

@@ -1,15 +1,16 @@
 services:
-  # Streamlit UI Service
+  # Streamlit UI Service (Knowledge Graph Wiki System)
   streamlit:
     build:
       context: ..
-      dockerfile: app/Dockerfile
+      dockerfile: src/ui/Dockerfile
     ports:
       - "8501:8501"
     environment:
-      - API_BASE_URL=http://fastapi:8000
+      - API_BASE_URL=http://fastapi:8000/api/v1
     volumes:
-      - ../app:/app
+      - ../src/ui:/app/src/ui
+      - ../src/core:/app/src/core
     depends_on:
       - fastapi
     networks:
@@ -39,13 +40,8 @@ services:
       - kg-network
     restart: unless-stopped
 
-
-
-  # 캐시 및 상태 관리는 이제 diskcache (파일 기반)으로 처리됩니다
-  # Redis 서비스는 더 이상 필요하지 않습니다
-
-# Redis 볼륨은 더 이상 필요하지 않습니다 (diskcache는 로컬 파일 시스템 사용)
-# volumes:
+# 캐시 및 상태 관리는 이제 diskcache (파일 기반)으로 처리됩니다
+# Redis 서비스는 더 이상 필요하지 않습니다
 
 networks:
   kg-network:

@@ -51,6 +51,16 @@ format-check: ## 포맷팅 확인 (CI용)
 	black --check src/ app/ tests/
 	isort --check-only src/ app/ tests/
 
+# 시스템 실행
+start: ## 통합 스크립트로 시스템 시작 (권장)
+	python start_system.py
+
+start-ui: ## UI만 실행 (개발용)
+	streamlit run src/ui/main.py --server.port 8501
+
+start-api: ## API 서버만 실행 (개발용)
+	uvicorn src.api.main:app --reload --port 8000 --host localhost
+
 # Docker 관련
 docker-build: ## Docker 이미지 빌드
 	docker-compose build
