@@ -14,10 +14,10 @@ from datetime import datetime
 from typing import List, Dict, Any
 import time
 
-from server.schemas.agents import ResearchIn, ResearchOut
-from server.agents.research.client import DuckDuckGoClient
-from server.agents.research.cache import ResearchCache
-from server.agents.research.agent import ResearchAgent
+from src.core.schemas.agents import ResearchIn, ResearchOut
+from src.agents.research.client import DuckDuckGoClient
+from src.agents.research.cache import ResearchCache
+from src.agents.research.agent import ResearchAgent
 
 
 @pytest.mark.agent

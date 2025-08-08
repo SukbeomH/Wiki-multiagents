@@ -11,8 +11,8 @@ import asyncio
 from datetime import datetime
 from unittest.mock import patch
 
-from server.utils.storage_manager import StorageManager, RedisConfig
-from server.schemas.base import CheckpointData, CheckpointType, WorkflowState, WorkflowStage
+from src.core.utils.storage_manager import StorageManager, RedisConfig
+from src.core.schemas.base import CheckpointData, CheckpointType, WorkflowState, WorkflowStage
 
 
 class TestRedisConfig:

@@ -15,17 +15,17 @@ Feedback (Human-in-Loop)
 from .research import ResearchAgent
 from .extractor import ExtractorAgent
 from .retriever import RetrieverAgent
-# from .wiki import WikiAgent
-# from .graphviz import GraphVizAgent
-# from .supervisor import SupervisorAgent
-# from .feedback import FeedbackAgent
+from .wiki import WikiAgent
+from .graphviz import GraphVizAgent
+from .supervisor import SupervisorAgent
+from .feedback import FeedbackAgent
 
 __all__ = [
     "ResearchAgent",
     "ExtractorAgent",
     "RetrieverAgent",
-    # "WikiAgent",
-    # "GraphVizAgent",
-    # "SupervisorAgent",
-    # "FeedbackAgent"
+    "WikiAgent",
+    "GraphVizAgent",
+    "SupervisorAgent",
+    "FeedbackAgent"
 ]

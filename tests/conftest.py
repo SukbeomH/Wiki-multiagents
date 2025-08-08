@@ -79,7 +79,7 @@ def test_db_session(test_db_engine):
 @pytest.fixture
 def mock_storage_manager():
     """Mock StorageManager (Redis 대체)"""
-    from server.utils.storage_manager import StorageManager
+    from src.core.utils.storage_manager import StorageManager
     mock = Mock(spec=StorageManager)
     mock.test_connection.return_value = True
     mock.get_sync_client.return_value = None  # fakeredis 없을 수 있음
@@ -110,7 +110,7 @@ def mock_openai_client():
 @pytest.fixture
 def api_client(mock_env_vars):
     """FastAPI 테스트 클라이언트"""
-    from server.main import app
+    from src.api.main import app
     return TestClient(app)
 
 

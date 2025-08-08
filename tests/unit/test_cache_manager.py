@@ -12,8 +12,8 @@ import os
 from pathlib import Path
 from datetime import datetime, timedelta
 
-from server.utils.cache_manager import CacheManager, CacheConfig
-from server.schemas.base import CheckpointData, CheckpointType, WorkflowState, WorkflowStage
+from src.core.utils.cache_manager import CacheManager, CacheConfig
+from src.core.schemas.base import CheckpointData, CheckpointType, WorkflowState, WorkflowStage
 
 
 class TestCacheConfig:

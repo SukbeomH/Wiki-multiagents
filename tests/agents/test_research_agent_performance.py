@@ -13,8 +13,8 @@ from typing import List, Dict, Any
 from datetime import datetime
 
 import pytest
-from server.agents.research import ResearchAgent
-from server.schemas.agents import ResearchIn
+from src.agents.research import ResearchAgent
+from src.core.schemas.agents import ResearchIn
 
 
 @pytest.mark.performance
@@ -414,8 +414,8 @@ class TestResearchAgentOptimization:
             print(f"\n캐시 크기 {cache_size} 테스트:")
             
             # 새로운 캐시로 Agent 재생성
-            from server.agents.research.cache import ResearchCache
-            from server.agents.research.client import DuckDuckGoClient
+            from src.agents.research.cache import ResearchCache
+            from src.agents.research.client import DuckDuckGoClient
             
             cache = ResearchCache(max_size=cache_size)
             client = DuckDuckGoClient()

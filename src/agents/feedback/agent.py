@@ -14,8 +14,11 @@ import sqlite3
 import json
 from datetime import datetime
 import asyncio
+import os
 
 from pydantic import BaseModel, Field
+
+from src.core.schemas.agents import FeedbackIn, FeedbackOut
 
 logger = logging.getLogger(__name__)
 
@@ -396,4 +399,120 @@ class FeedbackAgent:
                 
         except Exception as e:
             logger.error(f"Failed to get feedback statistics: {e}")
-            return {} 
+            return {}
+    
+    def process(self, input_data: FeedbackIn) -> FeedbackOut:
+        """
+        Feedback Agent 메인 처리 함수
+        
+        Args:
+            input_data: FeedbackIn 입력 데이터
+            
+        Returns:
+            FeedbackOut: 피드백 처리 결과
+        """
+        try:
+            logger.info(f"Feedback processing started: {input_data.feedback_id}")
+            
+            # 피드백 아이템 생성
+            feedback_item = FeedbackItem(
+                feedback_id=input_data.feedback_id,
+                workflow_id=input_data.workflow_id,
+                user_id=input_data.user_id,
+                feedback_type=input_data.feedback_type,
+                content=input_data.content,
+                rating=input_data.rating,
+                metadata=input_data.metadata
+            )
+            
+            # 피드백 제출
+            submit_success = self.submit_feedback(feedback_item)
+            if not submit_success:
+                raise ValueError("Failed to submit feedback")
+            
+            # Slack 알림 전송 (필요한 경우)
+            slack_sent = False
+            if input_data.send_slack_notification and self.slack_webhook_url:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    slack_sent = loop.run_until_complete(
+                        self.send_slack_notification(feedback_item)
+                    )
+                finally:
+                    loop.close()
+            
+            # 피드백 처리
+            process_result = self.process_feedback(input_data.feedback_id)
+            
+            # 결과 반환
+            result = FeedbackOut(
+                feedback_id=input_data.feedback_id,
+                workflow_id=input_data.workflow_id,
+                user_id=input_data.user_id,
+                feedback_type=input_data.feedback_type,
+                content=input_data.content,
+                rating=input_data.rating,
+                metadata=input_data.metadata,
+                status="processed" if process_result.get("success") else "failed",
+                submit_success=submit_success,
+                slack_sent=slack_sent,
+                process_result=process_result,
+                success=submit_success and process_result.get("success", False)
+            )
+            
+            logger.info(f"Feedback processing completed: {input_data.feedback_id}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Feedback processing failed: {e}")
+            return FeedbackOut(
+                feedback_id=input_data.feedback_id,
+                workflow_id=input_data.workflow_id,
+                user_id=input_data.user_id,
+                feedback_type=input_data.feedback_type,
+                content=input_data.content,
+                rating=input_data.rating,
+                metadata=input_data.metadata,
+                status="failed",
+                submit_success=False,
+                slack_sent=False,
+                process_result={"success": False, "error": str(e)},
+                success=False,
+                error=str(e)
+            )
+    
+    def health_check(self) -> Dict[str, Any]:
+        """
+        Feedback Agent 상태 점검
+        
+        Returns:
+            Dict[str, Any]: 상태 정보
+        """
+        try:
+            # 데이터베이스 확인
+            db_exists = self.db_path.exists()
+            db_writable = self.db_path.parent.is_dir() and os.access(self.db_path.parent, os.W_OK)
+            
+            # 통계 정보
+            stats = self.get_feedback_statistics()
+            
+            # Slack Webhook 확인
+            slack_configured = bool(self.slack_webhook_url)
+            
+            return {
+                "status": "healthy",
+                "db_path": str(self.db_path),
+                "db_exists": db_exists,
+                "db_writable": db_writable,
+                "slack_configured": slack_configured,
+                "statistics": stats,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            } 

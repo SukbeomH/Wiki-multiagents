@@ -15,7 +15,7 @@ sys.path.insert(0, str(project_root))
 
 from rdflib import Graph, Namespace, Literal
 from rdflib.namespace import RDF, RDFS, XSD
-from server.utils.kg_manager import RDFLibKnowledgeGraphManager
+from src.core.utils.kg_manager import RDFLibKnowledgeGraphManager
 
 
 class TestRDFLibIntegration(unittest.TestCase):

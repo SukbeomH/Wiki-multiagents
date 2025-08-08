@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-08-06 15:35:28",
+  "timestamp": "2025-08-07 17:10:06",
   "test_configuration": {
     "test_data_size": 5000,
     "dimension": 4096,
@@ -8,8 +8,8 @@
     "hnsw_m": 32
   },
   "index_build_performance": {
-    "build_time_seconds": 1.9208369255065918,
-    "vectors_per_second": 2603.0320083946353,
+    "build_time_seconds": 1.864305019378662,
+    "vectors_per_second": 2681.9645648255596,
     "index_size": 5000,
     "memory_usage_mb": 78.125
   },
@@ -22,117 +22,117 @@
   },
   "top_k_performance": {
     "top_k_1": {
-      "avg_search_time_ms": 0.7753705978393555,
-      "min_search_time_ms": 0.39196014404296875,
-      "max_search_time_ms": 1.1138916015625,
-      "std_search_time_ms": 0.1492879823109774,
+      "avg_search_time_ms": 0.5191516876220703,
+      "min_search_time_ms": 0.22602081298828125,
+      "max_search_time_ms": 0.9129047393798828,
+      "std_search_time_ms": 0.09842276150852532,
       "avg_results_returned": 1.0,
-      "queries_per_second": 1289.7058552214849
+      "queries_per_second": 1926.2192993735878
     },
     "top_k_5": {
-      "avg_search_time_ms": 0.8882236480712891,
-      "min_search_time_ms": 0.41294097900390625,
-      "max_search_time_ms": 1.4400482177734375,
-      "std_search_time_ms": 0.19440017743216242,
+      "avg_search_time_ms": 0.5894756317138672,
+      "min_search_time_ms": 0.2818107604980469,
+      "max_search_time_ms": 1.1248588562011719,
+      "std_search_time_ms": 0.1631484672698772,
       "avg_results_returned": 5.0,
-      "queries_per_second": 1125.842575990208
+      "queries_per_second": 1696.4229667858472
     },
     "top_k_10": {
-      "avg_search_time_ms": 0.9312629699707031,
-      "min_search_time_ms": 0.38909912109375,
-      "max_search_time_ms": 2.079010009765625,
-      "std_search_time_ms": 0.2873562196223118,
+      "avg_search_time_ms": 0.6655502319335938,
+      "min_search_time_ms": 0.25081634521484375,
+      "max_search_time_ms": 1.2769699096679688,
+      "std_search_time_ms": 0.19902862103904792,
       "avg_results_returned": 10.0,
-      "queries_per_second": 1073.810547875064
+      "queries_per_second": 1502.5161918954548
     },
     "top_k_20": {
-      "avg_search_time_ms": 1.0978174209594727,
-      "min_search_time_ms": 0.4673004150390625,
-      "max_search_time_ms": 5.084037780761719,
-      "std_search_time_ms": 0.8316233302006624,
+      "avg_search_time_ms": 0.7436466217041016,
+      "min_search_time_ms": 0.4057884216308594,
+      "max_search_time_ms": 2.147197723388672,
+      "std_search_time_ms": 0.3461051549510517,
       "avg_results_returned": 20.0,
-      "queries_per_second": 910.8982795390676
+      "queries_per_second": 1344.7247265219232
     },
     "top_k_50": {
-      "avg_search_time_ms": 1.0492372512817383,
-      "min_search_time_ms": 0.4329681396484375,
-      "max_search_time_ms": 3.7221908569335938,
-      "std_search_time_ms": 0.5774075268401928,
+      "avg_search_time_ms": 0.8106756210327148,
+      "min_search_time_ms": 0.29206275939941406,
+      "max_search_time_ms": 2.9349327087402344,
+      "std_search_time_ms": 0.47533868489945974,
       "avg_results_returned": 50.0,
-      "queries_per_second": 953.0732908866984
+      "queries_per_second": 1233.5390062995923
     }
   },
   "nprobe_optimization": {
     "nprobe_1": {
-      "avg_search_time_ms": 0.2865314483642578,
+      "avg_search_time_ms": 0.3031651178995768,
       "avg_accuracy": 0.9,
-      "queries_per_second": 3490.0183058745215
+      "queries_per_second": 3298.5325189398905
     },
     "nprobe_4": {
-      "avg_search_time_ms": 0.32988389333089196,
+      "avg_search_time_ms": 4.5106808344523115,
       "avg_accuracy": 0.9,
-      "queries_per_second": 3031.3695825001805
+      "queries_per_second": 221.69602255208562
     },
     "nprobe_8": {
-      "avg_search_time_ms": 0.4537502924601237,
+      "avg_search_time_ms": 0.6624301274617513,
       "avg_accuracy": 0.9,
-      "queries_per_second": 2203.8553288379017
+      "queries_per_second": 1509.5931760104615
     },
     "nprobe_16": {
-      "avg_search_time_ms": 0.915829340616862,
+      "avg_search_time_ms": 0.6077766418457031,
       "avg_accuracy": 0.9,
-      "queries_per_second": 1091.9064891789167
+      "queries_per_second": 1645.341283539934
     },
     "nprobe_32": {
-      "avg_search_time_ms": 2.1117448806762695,
+      "avg_search_time_ms": 1.1585632960001628,
       "avg_accuracy": 0.9,
-      "queries_per_second": 473.5420500604022
+      "queries_per_second": 863.1379946632277
     },
     "nprobe_64": {
-      "avg_search_time_ms": 2.3703893025716147,
+      "avg_search_time_ms": 1.4827410380045574,
       "avg_accuracy": 0.9,
-      "queries_per_second": 421.8716305018373
+      "queries_per_second": 674.4266020624746
     },
     "nprobe_128": {
-      "avg_search_time_ms": 2.076903978983561,
+      "avg_search_time_ms": 1.908238728841146,
       "avg_accuracy": 0.9,
-      "queries_per_second": 481.4859088908872
+      "queries_per_second": 524.0434463916839
     },
     "nprobe_256": {
-      "avg_search_time_ms": 1.9959529240926106,
+      "avg_search_time_ms": 2.016878128051758,
       "avg_accuracy": 0.9,
-      "queries_per_second": 501.013820481069
+      "queries_per_second": 495.8157788968485
     }
   },
   "batch_search_performance": {
     "batch_size_1": {
-      "avg_time_per_query_ms": 0.7929825782775879,
-      "queries_per_second": 1261.0617526706174,
+      "avg_time_per_query_ms": 0.43840646743774414,
+      "queries_per_second": 2280.9882478341974,
       "total_batches": 200
     },
     "batch_size_5": {
-      "avg_time_per_query_ms": 0.28609633445739746,
-      "queries_per_second": 17476.6307631409,
+      "avg_time_per_query_ms": 0.16762614250183105,
+      "queries_per_second": 29828.28290011734,
       "total_batches": 40
     },
     "batch_size_10": {
-      "avg_time_per_query_ms": 0.23210644721984863,
-      "queries_per_second": 43083.68043963946,
+      "avg_time_per_query_ms": 0.12405514717102052,
+      "queries_per_second": 80609.31148801229,
       "total_batches": 20
     },
     "batch_size_20": {
-      "avg_time_per_query_ms": 0.2071225643157959,
-      "queries_per_second": 96561.18379022372,
+      "avg_time_per_query_ms": 0.12068867683410646,
+      "queries_per_second": 165715.6290435693,
       "total_batches": 10
     },
     "batch_size_50": {
-      "avg_time_per_query_ms": 0.20756959915161133,
-      "queries_per_second": 240883.05900460595,
+      "avg_time_per_query_ms": 0.1218557357788086,
+      "queries_per_second": 410321.267853649,
       "total_batches": 4
     },
     "batch_size_100": {
-      "avg_time_per_query_ms": 0.191575288772583,
-      "queries_per_second": 521987.9904172241,
+      "avg_time_per_query_ms": 0.12172818183898926,
+      "queries_per_second": 821502.4531646314,
       "total_batches": 2
     }
   },

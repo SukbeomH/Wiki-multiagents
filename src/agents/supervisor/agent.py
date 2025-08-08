@@ -12,8 +12,11 @@ from typing import Dict, List, Optional, Any, Callable
 from pathlib import Path
 import asyncio
 from datetime import datetime, timedelta
+import os
 
 from pydantic import BaseModel, Field
+
+from src.core.schemas.agents import SupervisorIn, SupervisorOut
 
 logger = logging.getLogger(__name__)
 
@@ -303,4 +306,96 @@ class SupervisorAgent:
             
         except Exception as e:
             logger.error(f"Failed to cleanup workflows: {e}")
-            return 0 
+            return 0
+    
+    def process(self, input_data: SupervisorIn) -> SupervisorOut:
+        """
+        Supervisor Agent 메인 처리 함수
+        
+        Args:
+            input_data: SupervisorIn 입력 데이터
+            
+        Returns:
+            SupervisorOut: 워크플로우 실행 결과
+        """
+        try:
+            logger.info(f"Supervisor processing started: {input_data.workflow_id}")
+            
+            # 워크플로우 생성
+            workflow_state = self.create_workflow(
+                workflow_id=input_data.workflow_id,
+                steps=input_data.workflow_steps
+            )
+            
+            # 워크플로우 실행 (비동기 실행을 동기로 래핑)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result_state = loop.run_until_complete(
+                    self.execute_workflow(input_data.workflow_id, input_data.input_data)
+                )
+            finally:
+                loop.close()
+            
+            # 결과 반환
+            result = SupervisorOut(
+                workflow_id=result_state.workflow_id,
+                status=result_state.status,
+                current_step=result_state.current_step,
+                steps_completed=result_state.steps_completed,
+                data=result_state.data,
+                success=result_state.status == "completed",
+                error=result_state.error
+            )
+            
+            logger.info(f"Supervisor processing completed: {input_data.workflow_id}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Supervisor processing failed: {e}")
+            return SupervisorOut(
+                workflow_id=input_data.workflow_id,
+                status="failed",
+                current_step="",
+                steps_completed=[],
+                data={},
+                success=False,
+                error=str(e)
+            )
+    
+    def health_check(self) -> Dict[str, Any]:
+        """
+        Supervisor Agent 상태 점검
+        
+        Returns:
+            Dict[str, Any]: 상태 정보
+        """
+        try:
+            # 워크플로우 디렉토리 확인
+            workflow_dir_exists = self.workflow_dir.exists()
+            workflow_dir_writable = self.workflow_dir.is_dir() and os.access(self.workflow_dir, os.W_OK)
+            
+            # 활성 워크플로우 통계
+            active_workflows = len(self.active_workflows)
+            workflow_statuses = {}
+            for workflow in self.active_workflows.values():
+                status = workflow.status
+                workflow_statuses[status] = workflow_statuses.get(status, 0) + 1
+            
+            return {
+                "status": "healthy",
+                "workflow_dir": str(self.workflow_dir),
+                "workflow_dir_exists": workflow_dir_exists,
+                "workflow_dir_writable": workflow_dir_writable,
+                "active_workflows": active_workflows,
+                "workflow_statuses": workflow_statuses,
+                "registered_agents": list(self.agent_registry.keys()),
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            } 

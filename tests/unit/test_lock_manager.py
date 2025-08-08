@@ -12,7 +12,7 @@ import threading
 from pathlib import Path
 from unittest.mock import patch
 
-from server.utils.lock_manager import DistributedLockManager, LockInfo
+from src.core.utils.lock_manager import DistributedLockManager, LockInfo
 
 
 class TestLockInfo:

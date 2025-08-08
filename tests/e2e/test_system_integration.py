@@ -15,15 +15,18 @@ import uuid
 from datetime import datetime
 from typing import Dict, Any
 
-import redis
+try:
+    import redis  # 실환경 Redis
+except ImportError:  # 테스트 환경에서 redis 미설치 시 우회
+    redis = None
 import requests
 from pydantic import ValidationError
 
 # 스키마 import
-from server.schemas.base import (
-    CheckpointType, CheckpointData, WorkflowState, MessageHeader
+from src.core.schemas.base import (
+    CheckpointType, CheckpointData, WorkflowState, WorkflowStage, MessageHeader
 )
-from server.schemas.agents import (
+from src.core.schemas.agents import (
     ResearchIn, ResearchOut, ExtractorIn, ExtractorOut,
     WikiIn, WikiOut, Entity, Relation
 )
@@ -31,6 +34,8 @@ from server.schemas.agents import (
 
 class TestSystemIntegration:
     """전체 시스템 통합 테스트"""
+    # Redis 미사용 환경에서도 속성 접근 가능하도록 기본값 지정
+    redis_client = None
 
     @pytest.fixture(scope="class", autouse=True)
     def setup_test_environment(self):
@@ -39,17 +44,21 @@ class TestSystemIntegration:
         self.redis_port = 6379
         self.api_base_url = "http://localhost:8000"
         
-        # Redis 연결 테스트
-        try:
-            self.redis_client = redis.Redis(
-                host=self.redis_host, 
-                port=self.redis_port, 
-                decode_responses=True
-            )
-            self.redis_client.ping()
-            print("✅ Redis 연결 성공")
-        except Exception as e:
-            print(f"⚠️ Redis 연결 실패 (Docker 환경 필요): {e}")
+        # Redis 연결 테스트 (없으면 건너뜀)
+        if redis is not None:
+            try:
+                self.redis_client = redis.Redis(
+                    host=self.redis_host,
+                    port=self.redis_port,
+                    decode_responses=True
+                )
+                self.redis_client.ping()
+                print("✅ Redis 연결 성공")
+            except Exception as e:
+                print(f"⚠️ Redis 연결 실패 (Docker 환경 필요): {e}")
+                self.redis_client = None
+        else:
+            print("⚠️ redis 패키지 미설치 - Redis 테스트 건너뜀")
             self.redis_client = None
 
     def test_01_message_schemas_validation(self):
@@ -64,16 +73,14 @@ class TestSystemIntegration:
         assert CheckpointType.MANUAL in checkpoint_types
         print("✅ CheckpointType enum 검증 완료")
         
-        # 1.2 WorkflowState 스키마 테스트
+        # 1.2 WorkflowState 스키마 테스트 (신규 스키마 반영)
         workflow_state = WorkflowState(
             trace_id=str(uuid.uuid4()),
             keyword="integration-test",
-            current_agent="research",
-            step_count=1,
-            status="running"
+            current_stage=WorkflowStage.RESEARCH
         )
         assert workflow_state.keyword == "integration-test"
-        assert workflow_state.current_agent == "research"
+        assert workflow_state.current_stage == WorkflowStage.RESEARCH
         print("✅ WorkflowState 스키마 검증 완료")
         
         # 1.3 CheckpointData 스키마 테스트
@@ -103,21 +110,22 @@ class TestSystemIntegration:
         # 1.5 Entity/Relation 스키마 테스트
         entity = Entity(
             id="ent_001",
-            label="Artificial Intelligence",
-            type="concept",
-            properties={"domain": "technology", "confidence": 0.95}
+            name="Artificial Intelligence",
+            type="CONCEPT",
+            extra={"domain": "technology"},
+            confidence=0.95
         )
         
         relation = Relation(
-            id="rel_001",
             source="ent_001",
-            target="ent_002", 
-            type="related_to",
-            properties={"strength": 0.8}
+            target="ent_002",
+            predicate="RELATED_TO",
+            confidence=0.8,
+            properties={}
         )
         
-        assert entity.label == "Artificial Intelligence"
-        assert relation.type == "related_to"
+        assert entity.name == "Artificial Intelligence"
+        assert relation.predicate.upper() == "RELATED_TO"
         print("✅ Entity/Relation 스키마 검증 완료")
 
     def test_02_redis_json_integration(self):
@@ -202,9 +210,7 @@ class TestSystemIntegration:
             "state_snapshot": {
                 "trace_id": str(uuid.uuid4()),
                 "keyword": "api integration test",
-                "current_agent": "wiki",
-                "step_count": 5,
-                "status": "completed"
+                "current_stage": "wiki_generation"
             },
             "metadata": {
                 "api_version": "2.3",
@@ -223,7 +229,7 @@ class TestSystemIntegration:
         )
         
         assert checkpoint_data.checkpoint_type == CheckpointType.STAGE_COMPLETION
-        assert checkpoint_data.state_snapshot.current_agent == "wiki"
+        assert checkpoint_data.state_snapshot.current_stage == WorkflowStage.WIKI_GENERATION
         print("✅ API 요청 → CheckpointData 변환 성공")
         
         # 3.2 API 응답 스키마 검증
@@ -259,9 +265,7 @@ class TestSystemIntegration:
         research_state = WorkflowState(
             trace_id=trace_id,
             keyword=research_input.keyword,
-            current_agent="research",
-            step_count=1,
-            status="running"
+            current_stage=WorkflowStage.RESEARCH
         )
         
         research_checkpoint = CheckpointData(
@@ -295,9 +299,7 @@ class TestSystemIntegration:
         extractor_state = WorkflowState(
             trace_id=trace_id,
             keyword=research_input.keyword,
-            current_agent="extractor",
-            step_count=2,
-            status="running"
+            current_stage=WorkflowStage.EXTRACTION
         )
         
         extractor_checkpoint = CheckpointData(
@@ -318,42 +320,41 @@ class TestSystemIntegration:
         entities = [
             Entity(
                 id="ent_ai",
-                label="Artificial Intelligence",
-                type="concept",
-                properties={"domain": "computer_science", "confidence": 0.95}
+                name="Artificial Intelligence",
+                type="CONCEPT",
+                extra={"domain": "computer_science"},
+                confidence=0.95
             ),
             Entity(
                 id="ent_kg",
-                label="Knowledge Graph", 
-                type="concept",
-                properties={"domain": "data_science", "confidence": 0.92}
+                name="Knowledge Graph",
+                type="CONCEPT",
+                extra={"domain": "data_science"},
+                confidence=0.92
             )
         ]
         
         relations = [
             Relation(
-                id="rel_ai_kg",
                 source="ent_ai",
                 target="ent_kg",
-                type="utilizes",
-                properties={"strength": 0.85, "context": "representation"}
+                predicate="UTILIZES",
+                confidence=0.85,
+                properties={"context": "representation"}
             )
         ]
         
         wiki_input = WikiIn(
-            entities=[e.model_dump() for e in entities],
-            relations=[r.model_dump() for r in relations],
-            template="academic",
-            language="ko",
+            node_id="ent_ai",
+            context_docs=["doc1", "doc2"],
+            style="comprehensive",
             include_references=True
         )
         
         wiki_state = WorkflowState(
             trace_id=trace_id,
             keyword=research_input.keyword,
-            current_agent="wiki",
-            step_count=3,
-            status="completed"
+            current_stage=WorkflowStage.WIKI_GENERATION
         )
         
         final_checkpoint = CheckpointData(
@@ -373,14 +374,14 @@ class TestSystemIntegration:
         print("✅ 전체 워크플로우 시뮬레이션 완료")
         print(f"   - Workflow ID: {workflow_id}")
         print(f"   - Trace ID: {trace_id}")
-        print(f"   - Total Steps: {wiki_state.step_count}")
-        print(f"   - Final Status: {wiki_state.status}")
+        # step_count 필드는 제거됨
+        print(f"   - Final Stage: {wiki_state.current_stage.value}")
         
         # 4.4 최종 검증
         assert research_checkpoint.workflow_id == workflow_id
         assert extractor_checkpoint.workflow_id == workflow_id  
         assert final_checkpoint.workflow_id == workflow_id
-        assert final_checkpoint.state_snapshot.status == "completed"
+        assert final_checkpoint.state_snapshot.current_stage == WorkflowStage.WIKI_GENERATION
         
         # 정리 (Redis 키 삭제)
         if self.redis_client:

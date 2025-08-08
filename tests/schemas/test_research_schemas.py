@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from server.schemas.agents import ResearchIn, ResearchOut
+from src.core.schemas.agents import ResearchIn, ResearchOut
 
 
 @pytest.mark.schemas

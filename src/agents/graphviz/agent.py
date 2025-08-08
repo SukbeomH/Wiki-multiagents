@@ -11,8 +11,12 @@ import logging
 from typing import Dict, List, Optional, Any, Tuple
 from pathlib import Path
 import json
+import os
+from datetime import datetime
 
 from pydantic import BaseModel, Field
+
+from src.core.schemas.agents import GraphVizIn, GraphVizOut
 
 logger = logging.getLogger(__name__)
 
@@ -316,4 +320,85 @@ class GraphVizAgent:
             
         except Exception as e:
             logger.error(f"Failed to filter graph by node types: {e}")
-            return graph_data 
+            return graph_data
+    
+    def process(self, input_data: GraphVizIn) -> GraphVizOut:
+        """
+        GraphViz Agent 메인 처리 함수
+        
+        Args:
+            input_data: GraphVizIn 입력 데이터
+            
+        Returns:
+            GraphVizOut: 그래프 시각화 결과
+        """
+        try:
+            logger.info(f"GraphViz processing started: {input_data.graph_type}")
+            
+            # 입력 데이터에 따라 그래프 생성
+            if input_data.triples:
+                graph_data = self.create_graph_from_triples(input_data.triples)
+            elif input_data.entities:
+                graph_data = self.create_graph_from_entities(input_data.entities)
+            else:
+                raise ValueError("No valid input data provided (triples or entities)")
+            
+            # 그래프 저장 (필요한 경우)
+            saved_path = None
+            if input_data.save_graph:
+                filename = f"{input_data.graph_name or 'graph'}_{input_data.graph_type}.json"
+                saved_path = str(self.output_dir / filename)
+                self.save_graph_data(graph_data, filename)
+            
+            # Streamlit 설정 생성 (필요한 경우)
+            streamlit_config = None
+            if input_data.generate_streamlit_config:
+                streamlit_config = self.generate_streamlit_graph_config(graph_data)
+            
+            # 결과 반환
+            result = GraphVizOut(
+                graph_data=graph_data,
+                saved_path=saved_path,
+                streamlit_config=streamlit_config,
+                success=True
+            )
+            
+            logger.info(f"GraphViz processing completed: {len(graph_data.nodes)} nodes, {len(graph_data.edges)} edges")
+            return result
+            
+        except Exception as e:
+            logger.error(f"GraphViz processing failed: {e}")
+            return GraphVizOut(
+                graph_data=GraphData(),
+                saved_path=None,
+                streamlit_config=None,
+                success=False,
+                error=str(e)
+            )
+    
+    def health_check(self) -> Dict[str, Any]:
+        """
+        GraphViz Agent 상태 점검
+        
+        Returns:
+            Dict[str, Any]: 상태 정보
+        """
+        try:
+            # 출력 디렉토리 확인
+            output_dir_exists = self.output_dir.exists()
+            output_dir_writable = self.output_dir.is_dir() and os.access(self.output_dir, os.W_OK)
+            
+            return {
+                "status": "healthy",
+                "output_dir": str(self.output_dir),
+                "output_dir_exists": output_dir_exists,
+                "output_dir_writable": output_dir_writable,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            } 

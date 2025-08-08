@@ -10,9 +10,12 @@ Wiki Agent Implementation
 import logging
 from typing import Dict, List, Optional, Any
 from pathlib import Path
+from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, Field
+
+from src.core.schemas.agents import WikiIn, WikiOut
 
 logger = logging.getLogger(__name__)
 
@@ -211,4 +214,88 @@ class WikiAgent:
             
         except Exception as e:
             logger.error(f"Failed to save wiki content to {output_path}: {e}")
-            return False 
+            return False
+    
+    def process(self, input_data: WikiIn) -> WikiOut:
+        """
+        Wiki Agent 메인 처리 함수
+        
+        Args:
+            input_data: WikiIn 입력 데이터
+            
+        Returns:
+            WikiOut: 위키 생성 결과
+        """
+        try:
+            logger.info(f"Wiki processing started: {input_data.title}")
+            
+            # 위키 페이지 생성
+            wiki_content = self.create_wiki_page(
+                title=input_data.title,
+                content=input_data.content,
+                created_at=input_data.created_at,
+                author=input_data.author,
+                tags=input_data.tags
+            )
+            
+            # 요약 생성 (필요한 경우)
+            summary = None
+            if input_data.generate_summary:
+                summary = self.summarize_content(wiki_content.content, input_data.summary_length)
+            
+            # 결과 반환
+            result = WikiOut(
+                title=wiki_content.title,
+                content=wiki_content.content,
+                summary=summary,
+                metadata=wiki_content.metadata,
+                tags=wiki_content.tags,
+                success=True
+            )
+            
+            logger.info(f"Wiki processing completed: {input_data.title}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Wiki processing failed: {e}")
+            return WikiOut(
+                title=input_data.title,
+                content="",
+                summary="",
+                metadata={},
+                tags=[],
+                success=False,
+                error=str(e)
+            )
+    
+    def health_check(self) -> Dict[str, Any]:
+        """
+        Wiki Agent 상태 점검
+        
+        Returns:
+            Dict[str, Any]: 상태 정보
+        """
+        try:
+            # 템플릿 디렉토리 확인
+            template_dir_exists = Path(self.template_dir).exists()
+            
+            # 기본 템플릿 확인
+            template_available = False
+            if template_dir_exists:
+                template_path = Path(self.template_dir) / "wiki_page.md.j2"
+                template_available = template_path.exists()
+            
+            return {
+                "status": "healthy",
+                "template_dir": self.template_dir,
+                "template_dir_exists": template_dir_exists,
+                "template_available": template_available,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            } 

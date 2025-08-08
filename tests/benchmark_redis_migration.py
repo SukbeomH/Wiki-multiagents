@@ -15,10 +15,10 @@ from pathlib import Path
 from typing import List, Dict, Any
 from dataclasses import dataclass
 
-from server.utils.storage_manager import StorageManager
-from server.utils.cache_manager import CacheManager, CacheConfig
-from server.utils.lock_manager import DistributedLockManager
-from server.schemas.base import CheckpointData, CheckpointType, WorkflowState, WorkflowStage
+from src.core.utils.storage_manager import StorageManager
+from src.core.utils.cache_manager import CacheManager, CacheConfig
+from src.core.utils.lock_manager import DistributedLockManager
+from src.core.schemas.base import CheckpointData, CheckpointType, WorkflowState, WorkflowStage
 
 
 @dataclass
