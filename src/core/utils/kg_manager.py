@@ -602,6 +602,182 @@ class RDFLibKnowledgeGraphManager:
             logger.error(f"Failed to export to NetworkX: {e}")
             return None
     
+    def update_entity(self, entity_id: str, properties: Dict[str, Any]) -> bool:
+        """
+        엔티티 속성 업데이트 (RDFLib Graph 직접 수정)
+        
+        Args:
+            entity_id: 엔티티 ID
+            properties: 업데이트할 속성
+            
+        Returns:
+            bool: 성공 여부
+        """
+        try:
+            entity_uri = self.namespace[entity_id]
+            
+            # 기존 엔티티 존재 확인
+            check_query = f"""
+            ASK {{
+                ?entity a ?type .
+                FILTER(?entity = kg:{entity_id})
+            }}
+            """
+            exists = self.graph.query(check_query).askAnswer
+            if not exists:
+                logger.warning(f"Entity {entity_id} not found for update")
+                return False
+            
+            # 기존 속성 제거 및 새로운 속성 추가
+            for key, value in properties.items():
+                property_uri = self.namespace[key]
+                
+                # 기존 속성 제거 (모든 매칭하는 트리플 제거)
+                for s, p, o in list(self.graph.triples((entity_uri, property_uri, None))):
+                    self.graph.remove((s, p, o))
+                
+                # 새로운 속성 추가
+                if isinstance(value, str):
+                    self.graph.add((entity_uri, property_uri, Literal(value)))
+                elif isinstance(value, (int, float)):
+                    self.graph.add((entity_uri, property_uri, Literal(value)))
+                elif isinstance(value, bool):
+                    self.graph.add((entity_uri, property_uri, Literal(value, datatype=XSD.boolean)))
+                elif isinstance(value, datetime):
+                    self.graph.add((entity_uri, property_uri, Literal(value, datatype=XSD.dateTime)))
+                else:
+                    self.graph.add((entity_uri, property_uri, Literal(str(value))))
+            
+            # SQLite에 저장
+            self._save_to_sqlite()
+            
+            logger.info(f"Entity updated: {entity_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update entity {entity_id}: {e}")
+            return False
+    
+    def update_relation(self, relation_id: str, properties: Optional[Dict[str, Any]] = None) -> bool:
+        """
+        관계 속성 업데이트 (RDFLib Graph 직접 수정)
+        
+        Args:
+            relation_id: 관계 ID
+            properties: 업데이트할 속성 (선택적)
+            
+        Returns:
+            bool: 성공 여부
+        """
+        try:
+            relation_uri = self.namespace[relation_id]
+            
+            # 기존 관계 존재 확인
+            check_query = f"""
+            ASK {{
+                ?relation a ?type .
+                ?relation kg:source ?source .
+                ?relation kg:target ?target .
+                FILTER(?relation = kg:{relation_id})
+            }}
+            """
+            exists = self.graph.query(check_query).askAnswer
+            if not exists:
+                logger.warning(f"Relation {relation_id} not found for update")
+                return False
+            
+            if not properties:
+                logger.info(f"No properties to update for relation {relation_id}")
+                return True
+            
+            # 기존 속성 제거 및 새로운 속성 추가
+            for key, value in properties.items():
+                property_uri = self.namespace[key]
+                
+                # 기존 속성 제거
+                self.graph.remove((relation_uri, property_uri, None))
+                
+                # 새로운 속성 추가
+                if isinstance(value, str):
+                    self.graph.add((relation_uri, property_uri, Literal(value)))
+                elif isinstance(value, (int, float)):
+                    self.graph.add((relation_uri, property_uri, Literal(value)))
+                elif isinstance(value, bool):
+                    self.graph.add((relation_uri, property_uri, Literal(value, datatype=XSD.boolean)))
+                elif isinstance(value, datetime):
+                    self.graph.add((relation_uri, property_uri, Literal(value, datatype=XSD.dateTime)))
+                else:
+                    self.graph.add((relation_uri, property_uri, Literal(str(value))))
+            
+            # SQLite에 저장
+            self._save_to_sqlite()
+            
+            logger.info(f"Relation updated: {relation_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update relation {relation_id}: {e}")
+            return False
+    
+    def update_relation_endpoints(self, relation_id: str, new_source_id: Optional[str] = None, new_target_id: Optional[str] = None) -> bool:
+        """
+        관계의 소스/타겟 엔티티 업데이트 (RDFLib Graph 직접 수정)
+        
+        Args:
+            relation_id: 관계 ID
+            new_source_id: 새로운 소스 엔티티 ID (선택적)
+            new_target_id: 새로운 타겟 엔티티 ID (선택적)
+            
+        Returns:
+            bool: 성공 여부
+        """
+        try:
+            relation_uri = self.namespace[relation_id]
+            
+            # 기존 관계 존재 확인
+            check_query = f"""
+            ASK {{
+                ?relation a ?type .
+                ?relation kg:source ?source .
+                ?relation kg:target ?target .
+                FILTER(?relation = kg:{relation_id})
+            }}
+            """
+            exists = self.graph.query(check_query).askAnswer
+            if not exists:
+                logger.warning(f"Relation {relation_id} not found for endpoint update")
+                return False
+            
+            # 소스 엔티티 업데이트
+            if new_source_id is not None:
+                new_source_uri = self.namespace[new_source_id]
+                # 기존 소스 제거
+                self.graph.remove((relation_uri, self.namespace.source, None))
+                # 새로운 소스 추가
+                self.graph.add((relation_uri, self.namespace.source, new_source_uri))
+            
+            # 타겟 엔티티 업데이트
+            if new_target_id is not None:
+                new_target_uri = self.namespace[new_target_id]
+                # 기존 타겟 제거
+                self.graph.remove((relation_uri, self.namespace.target, None))
+                # 새로운 타겟 추가
+                self.graph.add((relation_uri, self.namespace.target, new_target_uri))
+            
+            if new_source_id is None and new_target_id is None:
+                logger.info(f"No endpoints to update for relation {relation_id}")
+                return True
+            
+            # SQLite에 저장
+            self._save_to_sqlite()
+            
+            logger.info(f"Relation endpoints updated: {relation_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update relation endpoints {relation_id}: {e}")
+            return False
+    
     def close(self):
         """
         그래프 연결 종료
