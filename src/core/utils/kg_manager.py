@@ -694,8 +694,9 @@ class RDFLibKnowledgeGraphManager:
             for key, value in properties.items():
                 property_uri = self.namespace[key]
                 
-                # 기존 속성 제거
-                self.graph.remove((relation_uri, property_uri, None))
+                # 기존 속성 제거 (모든 매칭하는 트리플 제거)
+                for s, p, o in list(self.graph.triples((relation_uri, property_uri, None))):
+                    self.graph.remove((s, p, o))
                 
                 # 새로운 속성 추가
                 if isinstance(value, str):
@@ -752,7 +753,8 @@ class RDFLibKnowledgeGraphManager:
             if new_source_id is not None:
                 new_source_uri = self.namespace[new_source_id]
                 # 기존 소스 제거
-                self.graph.remove((relation_uri, self.namespace.source, None))
+                for s, p, o in list(self.graph.triples((relation_uri, self.namespace.source, None))):
+                    self.graph.remove((s, p, o))
                 # 새로운 소스 추가
                 self.graph.add((relation_uri, self.namespace.source, new_source_uri))
             
@@ -760,7 +762,8 @@ class RDFLibKnowledgeGraphManager:
             if new_target_id is not None:
                 new_target_uri = self.namespace[new_target_id]
                 # 기존 타겟 제거
-                self.graph.remove((relation_uri, self.namespace.target, None))
+                for s, p, o in list(self.graph.triples((relation_uri, self.namespace.target, None))):
+                    self.graph.remove((s, p, o))
                 # 새로운 타겟 추가
                 self.graph.add((relation_uri, self.namespace.target, new_target_uri))
             

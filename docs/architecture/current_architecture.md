@@ -35,8 +35,8 @@ src/
 │   │   ├── agent.py       # 메인 에이전트 클래스
 │   │   ├── client.py      # DuckDuckGo 클라이언트
 │   │   └── cache.py       # 검색 결과 캐시
-│   ├── extractor/         # 엔티티 추출 에이전트
-│   │   └── agent.py       # spaCy NER + 규칙/의존구문 기반 추출
+│   ├── extractor/         # 엔티티·관계 추출 에이전트
+│   │   └── agent.py       # spaCy NER + korre 관계 추출 + LangGraph 워크플로우
 │   ├── retriever/         # 벡터 검색 에이전트
 │   │   └── agent.py       # FAISS 기반 검색
 │   ├── wiki/              # 위키 생성 에이전트

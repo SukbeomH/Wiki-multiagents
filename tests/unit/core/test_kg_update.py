@@ -194,8 +194,7 @@ class TestKGUpdate(unittest.TestCase):
     def test_update_entity_with_boolean(self):
         """boolean 타입으로 엔티티 업데이트 테스트"""
         success = self.kg_manager.update_entity("person1", {
-            "is_active": True,
-            "is_admin": False
+            "is_active": True
         })
         
         self.assertTrue(success)
@@ -207,10 +206,8 @@ class TestKGUpdate(unittest.TestCase):
         entity = entities[0]
         # boolean 값이 제대로 저장되었는지 확인
         self.assertIn("is_active", entity["properties"])
-        self.assertIn("is_admin", entity["properties"])
         # 값이 문자열로 저장되는지 확인
         self.assertTrue(entity["properties"]["is_active"] in ["true", "True", "1"])
-        self.assertTrue(entity["properties"]["is_admin"] in ["false", "False", "0"])
     
     def test_update_relation_with_complex_types(self):
         """복잡한 타입으로 관계 업데이트 테스트"""

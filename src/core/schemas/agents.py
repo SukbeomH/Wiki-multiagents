@@ -430,6 +430,10 @@ class FeedbackOut(BaseModel):
         default=False,
         description="사람의 검토가 필요한지 여부"
     )
+    kg_updates_applied: Optional[bool] = Field(
+        default=None,
+        description="Knowledge Graph 업데이트 적용 여부"
+    )
 
 
 # =============================================================================

@@ -4,17 +4,19 @@ Feedback API 라우터
 피드백 제출, 조회, 통계 API 엔드포인트
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from src.agents.feedback import FeedbackAgent, FeedbackItem
 from src.core.schemas.agents import FeedbackIn, FeedbackOut
+from src.core.utils.kg_manager import RDFLibKnowledgeGraphManager
 
 router = APIRouter(prefix="/api/v1/feedback", tags=["feedback"])
 
-# 피드백 에이전트 인스턴스
+# 피드백 에이전트 및 KG 매니저 인스턴스
 feedback_agent = FeedbackAgent()
+kg_manager = RDFLibKnowledgeGraphManager()
 
 
 class FeedbackSubmitRequest(BaseModel):
@@ -24,6 +26,7 @@ class FeedbackSubmitRequest(BaseModel):
     feedback_type: str = "general"
     content: str
     rating: Optional[int] = None
+    kg_updates: Optional[Dict[str, Any]] = None  # KG 업데이트 정보
 
 
 class FeedbackResponse(BaseModel):
@@ -37,6 +40,7 @@ class FeedbackResponse(BaseModel):
     status: str
     created_at: str
     processed_at: Optional[str]
+    kg_updates_applied: Optional[bool] = None  # KG 업데이트 적용 여부
 
 
 class FeedbackListResponse(BaseModel):
@@ -59,7 +63,7 @@ class FeedbackStatisticsResponse(BaseModel):
 
 @router.post("/submit", response_model=FeedbackOut)
 async def submit_feedback(request: FeedbackSubmitRequest):
-    """피드백 제출"""
+    """피드백 제출 및 KG 업데이트"""
     try:
         # FeedbackIn 스키마로 변환
         feedback_input = FeedbackIn(
@@ -73,10 +77,63 @@ async def submit_feedback(request: FeedbackSubmitRequest):
         # 피드백 처리
         result = feedback_agent.process(feedback_input)
         
-        return result
+        # KG 업데이트 처리
+        kg_updates_applied = False
+        if request.kg_updates:
+            try:
+                kg_updates_applied = await _apply_kg_updates(request.kg_updates)
+            except Exception as kg_error:
+                # KG 업데이트 실패는 피드백 처리에 영향을 주지 않도록 함
+                print(f"KG 업데이트 실패 (피드백은 성공): {kg_error}")
+        
+        # 결과에 KG 업데이트 상태 추가
+        if hasattr(result, 'dict'):
+            result_dict = result.dict()
+            result_dict['kg_updates_applied'] = kg_updates_applied
+            return result_dict
+        else:
+            return result
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"피드백 제출 실패: {str(e)}")
+
+
+async def _apply_kg_updates(kg_updates: Dict[str, Any]) -> bool:
+    """KG 업데이트 적용"""
+    try:
+        # 엔티티 업데이트
+        if 'entities' in kg_updates:
+            for entity_id, properties in kg_updates['entities'].items():
+                success = kg_manager.update_entity(entity_id, properties)
+                if not success:
+                    print(f"엔티티 업데이트 실패: {entity_id}")
+                    return False
+        
+        # 관계 업데이트
+        if 'relations' in kg_updates:
+            for relation_id, properties in kg_updates['relations'].items():
+                success = kg_manager.update_relation(relation_id, properties)
+                if not success:
+                    print(f"관계 업데이트 실패: {relation_id}")
+                    return False
+        
+        # 관계 엔드포인트 업데이트
+        if 'relation_endpoints' in kg_updates:
+            for relation_id, endpoint_data in kg_updates['relation_endpoints'].items():
+                success = kg_manager.update_relation_endpoints(
+                    relation_id,
+                    new_source_id=endpoint_data.get('new_source_id'),
+                    new_target_id=endpoint_data.get('new_target_id')
+                )
+                if not success:
+                    print(f"관계 엔드포인트 업데이트 실패: {relation_id}")
+                    return False
+        
+        return True
+        
+    except Exception as e:
+        print(f"KG 업데이트 처리 중 오류: {e}")
+        return False
 
 
 
@@ -167,6 +224,32 @@ async def health_check():
         return health_info
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"상태 확인 실패: {str(e)}")
+
+
+@router.get("/kg/status")
+async def get_kg_status():
+    """Knowledge Graph 상태 확인"""
+    try:
+        # KG 통계 정보 반환
+        stats = {
+            "total_entities": len(kg_manager.query_entities()),
+            "total_relations": len(kg_manager.query_relations()),
+            "graph_size": len(kg_manager.graph),
+            "status": "active"
+        }
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"KG 상태 확인 실패: {str(e)}")
+
+
+@router.post("/kg/update")
+async def update_kg_directly(updates: Dict[str, Any]):
+    """직접 KG 업데이트 (테스트용)"""
+    try:
+        success = await _apply_kg_updates(updates)
+        return {"success": success, "message": "KG 업데이트 완료" if success else "KG 업데이트 실패"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"KG 업데이트 실패: {str(e)}")
 
 
 @router.get("/{feedback_id}", response_model=FeedbackResponse)

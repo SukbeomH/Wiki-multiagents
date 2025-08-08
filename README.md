@@ -15,7 +15,7 @@
 ### ✨ 핵심 기능
 
 - 🔍 **자동 정보 수집**: DuckDuckGo를 통한 실시간 웹 검색 (API 키 불필요)
-- 🧠 **지능형 추출(경량화)**: spaCy NER + 규칙/의존구문 기반 관계 추출  
+- 🧠 **지능형 추출(단순화)**: spaCy NER + korre 관계 추출 + LangGraph 워크플로우  
 - 📊 **벡터 검색**: FAISS IVF-HNSW 인덱스 기반 유사 문서 검색
 - 📝 **위키 생성**: Jinja2 템플릿 + GPT-4o 스타일링
 - 🕸️ **그래프 시각화**: streamlit-agraph 기반 인터랙티브 그래프
@@ -29,7 +29,7 @@
 | 에이전트 | 역할 | 주요 기술 |
 |---------|------|-----------|
 | **Research** | 키워드 기반 문서 수집·캐싱 | DuckDuckGo API, LRU Cache |
-| **Extractor** | 엔티티·관계 추출·증분 업데이트 | spaCy NER, 규칙/의존구문 기반 후처리 |
+| **Extractor** | 엔티티·관계 추출·증분 업데이트 | spaCy NER, korre 관계 추출, LangGraph 워크플로우 |
 | **Retriever** | 유사 문서 선별·문맥 보강 (RAG) | FAISS IVF‑HNSW, sentence-transformers |
 | **Wiki** | Markdown 위키 작성·요약 | Jinja2 Template, GPT‑4o Styler |
 | **GraphViz** | 지식 그래프 시각화 | streamlit‑agraph, st‑link‑analysis |
@@ -130,7 +130,7 @@ final/
 │   │   └── workflow/          # 워크플로우 로직
 │   ├── agents/                 # 7개 AI 에이전트
 │   │   ├── research/          # 정보 수집 에이전트
-│   │   ├── extractor/         # 엔티티 추출 에이전트
+│   │   ├── extractor/         # 엔티티·관계 추출 에이전트 (ext.md 기반 단순화)
 │   │   ├── retriever/         # RAG 검색 에이전트
 │   │   ├── wiki/              # 위키 생성 에이전트
 │   │   ├── graphviz/          # 그래프 시각화 에이전트
