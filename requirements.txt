@@ -109,9 +109,9 @@ authlib==1.2.1
 # =============================================================================
 # Communication & Notifications
 # =============================================================================
-# Slack Integration
-slack-sdk==3.26.1
-slack-bolt==1.18.1
+# Slack Integration (제거됨 - 단순화 계획에 따라)
+# slack-sdk==3.26.1
+# slack-bolt==1.18.1
 
 # Email (Optional)
 

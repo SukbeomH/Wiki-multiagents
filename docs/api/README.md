@@ -13,7 +13,7 @@ AI Knowledge Graph System의 REST API 문서입니다. 이 API는 FastAPI를 기
 
 ## 인증
 
-현재 API는 인증이 필요하지 않습니다. 향후 JWT 기반 인증이 추가될 예정입니다.
+현재 API는 인증이 필요하지 않습니다. (단순화 계획: 인증/권한은 후속 단계로 이관)
 
 ## 엔드포인트
 
@@ -37,11 +37,11 @@ AI Knowledge Graph System의 REST API 문서입니다. 이 API는 FastAPI를 기
 }
 ```
 
-### 2. 워크플로우
+### 2. 워크플로우 (단순화 Flow)
 
 #### POST `/workflow/debate`
 
-지식 그래프 워크플로우를 시작합니다.
+지식 그래프 워크플로우를 시작합니다. 내부적으로 LangGraph 기반의 단순 직렬 흐름(Research → Extract → Retrieve → Wiki → GraphViz)을 수행하며, 각 단계는 filelock 기반 락과 고정 지연 재시도(RetryManager), 체크포인트(CheckpointManager)를 통해 기본적인 견고성을 갖습니다.
 
 **요청 본문:**
 ```json
@@ -119,7 +119,7 @@ AI Knowledge Graph System의 REST API 문서입니다. 이 API는 FastAPI를 기
 }
 ```
 
-### 3. 체크포인트
+### 3. 체크포인트 (CheckpointManager)
 
 #### GET `/checkpoints/{workflow_id}`
 
@@ -160,7 +160,7 @@ AI Knowledge Graph System의 REST API 문서입니다. 이 API는 FastAPI를 기
 }
 ```
 
-### 4. 검색
+### 4. 검색 (FAISS Retriever)
 
 #### POST `/retriever/search`
 

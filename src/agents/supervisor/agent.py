@@ -26,6 +26,14 @@ from src.core.schemas.agents import SupervisorIn, SupervisorOut
 logger = logging.getLogger(__name__)
 
 
+class WorkflowStepError(Exception):
+    """Raised to indicate a workflow step failed, carrying the step name and message."""
+
+    def __init__(self, step_name: str, message: str):
+        super().__init__(message)
+        self.step_name = step_name
+        self.message = message
+
 class WorkflowState(TypedDict):
     """워크플로우 상태 (LangGraph 호환)"""
     workflow_id: str
@@ -114,7 +122,7 @@ class SupervisorAgent:
             if "research" in self.agent_registry:
                 research_agent = self.agent_registry["research"]
                 # 실제 Research Agent 호출 로직
-                result = {"research_data": "sample_research_result"}
+                result = research_agent.process()
             else:
                 result = {"research_data": "mock_research_result"}
             
@@ -129,9 +137,8 @@ class SupervisorAgent:
             
         except Exception as e:
             logger.error(f"Research step failed: {e}")
-            state["error"] = str(e)
-            state["status"] = "failed"
-            return state
+            # 실패 지점 전달을 위해 step 포함 예외 재발생
+            raise WorkflowStepError("research", str(e))
     
     def _extract_step(self, state: WorkflowState) -> WorkflowState:
         """Extract 단계 실행"""
@@ -142,7 +149,7 @@ class SupervisorAgent:
             if "extractor" in self.agent_registry:
                 extractor_agent = self.agent_registry["extractor"]
                 # 실제 Extractor Agent 호출 로직
-                result = {"extracted_entities": [], "extracted_relations": []}
+                result = extractor_agent.process()
             else:
                 result = {"extracted_entities": [], "extracted_relations": []}
             
@@ -157,9 +164,7 @@ class SupervisorAgent:
             
         except Exception as e:
             logger.error(f"Extract step failed: {e}")
-            state["error"] = str(e)
-            state["status"] = "failed"
-            return state
+            raise WorkflowStepError("extract", str(e))
     
     def _retrieve_step(self, state: WorkflowState) -> WorkflowState:
         """Retrieve 단계 실행"""
@@ -170,7 +175,7 @@ class SupervisorAgent:
             if "retriever" in self.agent_registry:
                 retriever_agent = self.agent_registry["retriever"]
                 # 실제 Retriever Agent 호출 로직
-                result = {"retrieved_documents": []}
+                result = retriever_agent.process()
             else:
                 result = {"retrieved_documents": []}
             
@@ -185,9 +190,7 @@ class SupervisorAgent:
             
         except Exception as e:
             logger.error(f"Retrieve step failed: {e}")
-            state["error"] = str(e)
-            state["status"] = "failed"
-            return state
+            raise WorkflowStepError("retrieve", str(e))
     
     def _wiki_step(self, state: WorkflowState) -> WorkflowState:
         """Wiki 단계 실행"""
@@ -198,7 +201,7 @@ class SupervisorAgent:
             if "wiki" in self.agent_registry:
                 wiki_agent = self.agent_registry["wiki"]
                 # 실제 Wiki Agent 호출 로직
-                result = {"wiki_content": "sample_wiki_content"}
+                result = wiki_agent.process()
             else:
                 result = {"wiki_content": "mock_wiki_content"}
             
@@ -213,9 +216,7 @@ class SupervisorAgent:
             
         except Exception as e:
             logger.error(f"Wiki step failed: {e}")
-            state["error"] = str(e)
-            state["status"] = "failed"
-            return state
+            raise WorkflowStepError("wiki", str(e))
     
     def _graphviz_step(self, state: WorkflowState) -> WorkflowState:
         """GraphViz 단계 실행"""
@@ -226,7 +227,7 @@ class SupervisorAgent:
             if "graphviz" in self.agent_registry:
                 graphviz_agent = self.agent_registry["graphviz"]
                 # 실제 GraphViz Agent 호출 로직
-                result = {"graph_data": "sample_graph_data"}
+                result = graphviz_agent.process()
             else:
                 result = {"graph_data": "mock_graph_data"}
             
@@ -242,9 +243,7 @@ class SupervisorAgent:
             
         except Exception as e:
             logger.error(f"GraphViz step failed: {e}")
-            state["error"] = str(e)
-            state["status"] = "failed"
-            return state
+            raise WorkflowStepError("graphviz", str(e))
     
     def execute_workflow(self, workflow_id: str, input_data: Dict[str, Any]) -> WorkflowState:
         """
@@ -283,13 +282,15 @@ class SupervisorAgent:
             
         except Exception as e:
             logger.error(f"Workflow execution failed: {e}")
+            failed_step = e.step_name if isinstance(e, WorkflowStepError) else ""
+            error_message = e.message if isinstance(e, WorkflowStepError) else str(e)
             error_state = {
                 "workflow_id": workflow_id,
                 "status": "failed",
-                "current_step": "",
+                "current_step": failed_step,
                 "steps_completed": [],
                 "data": input_data,
-                "error": str(e),
+                "error": error_message,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()
             }

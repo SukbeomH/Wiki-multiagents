@@ -10,17 +10,17 @@
 
 ## 🎯 프로젝트 개요
 
-이 시스템은 **7개의 전문 AI 에이전트**가 협력하여 키워드를 기반으로 **지식 그래프를 자동으로 구축**하고, 이를 바탕으로 **위키 문서를 실시간으로 생성·편집**할 수 있는 통합 플랫폼입니다.
+이 시스템은 **여러 전문 AI 에이전트**가 협력하여 키워드를 기반으로 **지식 그래프를 자동으로 구축**하고, 이를 바탕으로 **위키 문서를 실시간으로 생성·편집**할 수 있는 통합 플랫폼입니다. 최근 단순화 계획에 따라 워크플로우, 락, 재시도, 체크포인트, 알림 체계가 경량화되었습니다.
 
 ### ✨ 핵심 기능
 
 - 🔍 **자동 정보 수집**: DuckDuckGo를 통한 실시간 웹 검색 (API 키 불필요)
-- 🧠 **지능형 추출**: Azure GPT-4o 기반 엔티티·관계 추출  
+- 🧠 **지능형 추출(경량화)**: spaCy NER + 규칙/의존구문 기반 관계 추출  
 - 📊 **벡터 검색**: FAISS IVF-HNSW 인덱스 기반 유사 문서 검색
 - 📝 **위키 생성**: Jinja2 템플릿 + GPT-4o 스타일링
 - 🕸️ **그래프 시각화**: streamlit-agraph 기반 인터랙티브 그래프
-- 🔄 **워크플로우 관리**: LangGraph 기반 오케스트레이션(filelock 락)
-- 💬 **피드백 루프**: Slack 연동 Human-in-Loop 시스템
+- 🔄 **워크플로우 관리(단순화)**: LangGraph + filelock 락 + RetryManager(고정 지연) + CheckpointManager(롤백)
+- 💬 **피드백 루프(단순화)**: SQLite 저장 + 콘솔/파일 로깅 (Slack 제거)
 
 ## 🏗️ 아키텍처
 
@@ -29,18 +29,18 @@
 | 에이전트 | 역할 | 주요 기술 |
 |---------|------|-----------|
 | **Research** | 키워드 기반 문서 수집·캐싱 | DuckDuckGo API, LRU Cache |
-| **Extractor** | 엔티티·관계 추출·증분 업데이트 | Azure GPT‑4o, Regex Post‑processing |
+| **Extractor** | 엔티티·관계 추출·증분 업데이트 | spaCy NER, 규칙/의존구문 기반 후처리 |
 | **Retriever** | 유사 문서 선별·문맥 보강 (RAG) | FAISS IVF‑HNSW, sentence-transformers |
 | **Wiki** | Markdown 위키 작성·요약 | Jinja2 Template, GPT‑4o Styler |
 | **GraphViz** | 지식 그래프 시각화 | streamlit‑agraph, st‑link‑analysis |
-| **Supervisor** | 오케스트레이션·Lock·Retry | LangGraph, Redis Redlock |
-| **Feedback** | 사용자 피드백 수집·정제 루프 | SQLite Store, Slack Webhook |
+| **Supervisor** | 오케스트레이션·Lock·Retry | LangGraph, filelock, RetryManager, CheckpointManager |
+| **Feedback** | 사용자 피드백 수집·정제 루프 | SQLite Store, (Slack 제거) |
 
 ### 기술 스택
 
 - **Backend**: FastAPI, Python 3.11+
 - **Frontend**: Streamlit, streamlit-agraph
-- **AI/LLM**: Azure OpenAI GPT-4o, LangChain, LangGraph
+- **AI/LLM**: spaCy, LangChain, LangGraph (LLM 선택사항)
 - **Database/Storage**: RDFLib + SQLite (지식 그래프), diskcache (캐시)
 - **Vector Store**: FAISS IVF-HNSW (4096차원)
 - **Infrastructure**: Docker, Docker Compose
@@ -158,7 +158,7 @@ final/
 
 ## 🧪 테스트
 
-이 프로젝트는 **80% 이상의 코드 커버리지**를 목표로 합니다.
+이 프로젝트는 단순화된 구조에 맞춰 **최소 커버리지 25% (점진 상향 예정)**를 기준으로 합니다.
 
 ```bash
 # 전체 테스트 실행
@@ -227,11 +227,9 @@ make clean
 - **RBAC**: 역할 기반 접근 제어
 - **API Rate Limiting**: API 남용 방지
 
-## 📈 모니터링 & 알림
+## 📈 모니터링 & 알림(단순화)
 
-- **Slack 연동**: 워크플로우 성공/실패 알림
-- **Prometheus 메트릭**: 시스템 성능 모니터링  
-- **구조화된 로깅**: 디버깅 및 추적 지원
+- **구조화된 로깅**: 콘솔/파일 로깅 중심 (Slack 제거)
 - **헬스체크**: 서비스 상태 실시간 확인
 
 ## 🤝 기여 방법

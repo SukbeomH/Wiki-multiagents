@@ -4,7 +4,7 @@
 
 AI Knowledge Graph System은 새로운 `src` 구조로 리팩토링되어 모듈화되고 확장 가능한 아키텍처를 갖추게 되었습니다.
 
-## 새로운 디렉토리 구조
+## 새로운 디렉토리 구조 (단순화 반영)
 
 ```
 src/
@@ -21,8 +21,9 @@ src/
 │   │   ├── cache_manager.py      # 캐시 관리 (diskcache 기반)
 │   │   ├── config.py             # 설정 관리
 │   │   ├── kg_manager.py         # RDFLib 지식 그래프 관리
-│   │   ├── lock_manager.py       # 분산 락 관리
-│   │   ├── redis_manager.py      # Redis 관리 (선택적)
+│   │   ├── lock_manager.py       # 파일 기반 락 (filelock)
+│   │   ├── retry_manager.py      # 고정 지연 재시도(기본 1초, 최대 3회)
+│   │   ├── checkpoint_manager.py # 상태 체크포인트 및 롤백
 │   │   ├── scheduler.py          # 작업 스케줄러
 │   │   └── storage_manager.py    # 통합 스토리지 관리
 │   └── workflow/          # 워크플로우 로직
@@ -35,7 +36,7 @@ src/
 │   │   ├── client.py      # DuckDuckGo 클라이언트
 │   │   └── cache.py       # 검색 결과 캐시
 │   ├── extractor/         # 엔티티 추출 에이전트
-│   │   └── agent.py       # GPT-4o 기반 추출 로직
+│   │   └── agent.py       # spaCy NER + 규칙/의존구문 기반 추출
 │   ├── retriever/         # 벡터 검색 에이전트
 │   │   └── agent.py       # FAISS 기반 검색
 │   ├── wiki/              # 위키 생성 에이전트
@@ -44,7 +45,7 @@ src/
 │   ├── graphviz/          # 그래프 시각화 에이전트
 │   │   └── agent.py       # Streamlit 그래프 생성
 │   ├── supervisor/        # 워크플로우 관리 에이전트
-│   │   └── agent.py       # LangGraph 오케스트레이션
+│   │   └── agent.py       # LangGraph 오케스트레이션(연결: filelock, retry, checkpoint)
 │   └── feedback/          # 피드백 처리 에이전트
 │       └── agent.py       # SQLite 기반 피드백 저장
 └── api/                    # FastAPI 백엔드
@@ -124,7 +125,7 @@ LangGraph 기반 워크플로우 오케스트레이션을 담당합니다.
 - 워크플로우 상태 관리
 - `DebateState` 클래스
 
-## AI 에이전트 (src/agents)
+## AI 에이전트 (src/agents) — 단순화 계획 반영
 
 ### 1. Research Agent
 - **역할**: 키워드 기반 문서 수집
@@ -134,7 +135,7 @@ LangGraph 기반 워크플로우 오케스트레이션을 담당합니다.
 
 ### 2. Extractor Agent
 - **역할**: 엔티티 및 관계 추출
-- **기술**: Azure GPT-4o, 정규식 후처리
+- **기술**: spaCy NER, 규칙/의존구문 기반 후처리
 - **입력**: 문서 목록, 추출 모드
 - **출력**: 엔티티 및 관계 목록
 
@@ -158,13 +159,13 @@ LangGraph 기반 워크플로우 오케스트레이션을 담당합니다.
 
 ### 6. Supervisor Agent
 - **역할**: 워크플로우 오케스트레이션
-- **기술**: LangGraph, 분산 락
+- **기술**: LangGraph, filelock, RetryManager, CheckpointManager
 - **입력**: 워크플로우 정의
 - **출력**: 실행 상태 및 결과
 
 ### 7. Feedback Agent
 - **역할**: 사용자 피드백 처리
-- **기술**: SQLite, Slack 웹훅
+- **기술**: SQLite, (Slack 제거), 콘솔/파일 로깅
 - **입력**: 피드백 데이터
 - **출력**: 처리 결과 및 알림
 
