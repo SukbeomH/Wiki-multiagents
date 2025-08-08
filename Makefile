@@ -11,7 +11,7 @@ install: ## 의존성 설치
 	pip install -r requirements.txt
 
 install-dev: ## 개발 의존성 설치
-	pip install -r requirements-dev.txt
+	pip install -r requirements.txt
 
 # 테스트 실행
 test: ## 모든 테스트 실행
@@ -40,16 +40,16 @@ test-slow: ## 느린 테스트만 실행
 
 # 코드 품질
 lint: ## 코드 린팅
-	flake8 server/ app/ tests/
+	flake8 src/ app/ tests/
 	mypy server/ app/
 
 format: ## 코드 포맷팅
-	black server/ app/ tests/
-	isort server/ app/ tests/
+	black src/ app/ tests/
+	isort src/ app/ tests/
 
 format-check: ## 포맷팅 확인 (CI용)
-	black --check server/ app/ tests/
-	isort --check-only server/ app/ tests/
+	black --check src/ app/ tests/
+	isort --check-only src/ app/ tests/
 
 # Docker 관련
 docker-build: ## Docker 이미지 빌드

@@ -20,20 +20,21 @@ services:
   fastapi:
     build:
       context: ..
-      dockerfile: server/Dockerfile
+      dockerfile: src/Dockerfile
     ports:
       - "8000:8000"
     environment:
       - RDFLIB_STORE_URI=sqlite:///./data/kg.db
       - RDFLIB_GRAPH_IDENTIFIER=kg
       - RDFLIB_NAMESPACE_PREFIX=http://example.org/kg/
-      - CACHE_DIR=/server/data/cache
-      - LOCK_DIR=/server/data/locks
+      - CACHE_DIR=/app/data/cache
+      - LOCK_DIR=/app/data/locks
     env_file:
       - ../.env
     volumes:
-      - ../server:/server
-      - ../data:/server/data
+      - ../src:/app/src
+      - ../data:/app/data
+      - ../requirements.txt:/app/requirements.txt
     networks:
       - kg-network
     restart: unless-stopped
