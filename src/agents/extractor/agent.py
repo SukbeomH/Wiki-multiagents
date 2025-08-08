@@ -1,25 +1,26 @@
 """
-Extractor Agent
+Extractor Agent (단순화된 버전)
 
-spaCy 기반 실제 Named Entity Recognition을 담당하는 에이전트
-- 모듈화된 아키텍처 (EntityExtractor, RelationExtractor, ExtractionStrategy)
-- extraction_mode별 차별화된 처리 (comprehensive/fast/focused)
-- 실제 신뢰도 계산 및 배치 처리 최적화
+단일 agent.py에 통합된 spaCy 기반 NER 및 의존구문분석 기반 관계추출
+- extraction_mode: comprehensive(ko_core_news_lg) 및 fast(ko_core_news_sm)만 지원
+- spaCy 확률 기반 기본 신뢰도 계산
+- 단순 순차 처리 방식
+- 기존 테스트 케이스 완전 호환
 """
 
 import json
 import logging
 import os
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
 import re
 import uuid
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.core.schemas.agents import ExtractorIn, ExtractorOut, Entity, Relation
 
 
 class ExtractorAgent:
-    """spaCy 기반 엔티티·관계 추출 에이전트 (재설계됨)"""
+    """단순화된 spaCy 기반 엔티티·관계 추출 에이전트"""
     
     def __init__(self, log_level: str = "INFO"):
         """
@@ -31,33 +32,25 @@ class ExtractorAgent:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(getattr(logging, log_level.upper()))
         
-        # 전략 객체들 (지연 로딩)
-        self._strategies = {}
-        self._legacy_mode = False  # 레거시 모드 플래그 (기존 테스트 호환성)
+        # spaCy 모델 캐시
+        self._nlp_models = {}
+        self._legacy_mode = False
         
         # 구조화된 로그 초기화
         self._log_structured(
             "extractor_agent_initialized",
             log_level=log_level,
-            architecture="spacy_based_modular"
+            architecture="simplified_spacy_based"
         )
     
     def _log_structured(self, event: str, **kwargs):
-        """
-        구조화된 JSON 로그 출력
-        
-        Args:
-            event: 이벤트 이름
-            **kwargs: 추가 로그 데이터
-        """
-        # Mock 객체나 직렬화할 수 없는 객체 처리
+        """구조화된 JSON 로그 출력"""
         safe_kwargs = {}
         for key, value in kwargs.items():
             if hasattr(value, '__class__') and 'Mock' in value.__class__.__name__:
                 safe_kwargs[key] = f"<{value.__class__.__name__}>"
             else:
                 try:
-                    # JSON 직렬화 테스트
                     json.dumps(value, ensure_ascii=False)
                     safe_kwargs[key] = value
                 except (TypeError, ValueError):
@@ -72,7 +65,7 @@ class ExtractorAgent:
     
     def extract(self, input_data: ExtractorIn) -> ExtractorOut:
         """
-        문서에서 엔티티와 관계를 추출 (새로운 spaCy 기반 아키텍처)
+        문서에서 엔티티와 관계를 추출 (단순화된 spaCy 기반)
         
         Args:
             input_data: 추출 입력 데이터
@@ -88,18 +81,18 @@ class ExtractorAgent:
             extraction_mode=input_data.extraction_mode,
             entity_types=input_data.entity_types,
             min_confidence=input_data.min_confidence,
-            architecture="spacy_based"
+            architecture="simplified_spacy_based"
         )
         
         try:
-            # spaCy 모델 및 전략 사용 가능성 확인
+            # spaCy 모델 사용 가능성 확인
             use_spacy = self._check_spacy_availability()
             
             if use_spacy and not self._legacy_mode:
-                # 새로운 spaCy 기반 추출
-                entities, relations = self._extract_with_spacy_strategy(input_data)
+                # 단순화된 spaCy 기반 추출
+                entities, relations = self._extract_with_spacy(input_data)
             else:
-                # 레거시 호환성을 위한 기존 방식 (테스트 통과용)
+                # 레거시 호환성을 위한 기존 방식
                 entities, relations = self._extract_legacy_mode(input_data)
             
             processing_time = (datetime.now() - start_time).total_seconds()
@@ -111,7 +104,7 @@ class ExtractorAgent:
                 "relations_found": len(relations),
                 "avg_confidence": (sum(e.confidence for e in entities) / len(entities)) if entities else 0.0,
                 "processing_time": processing_time,
-                "method": "spacy_based" if use_spacy and not self._legacy_mode else "legacy"
+                "method": "simplified_spacy_based" if use_spacy and not self._legacy_mode else "legacy"
             }
             
             result = ExtractorOut(
@@ -157,7 +150,7 @@ class ExtractorAgent:
             )
 
     # ---------------------------------------------------------------------
-    # 새로운 spaCy 기반 추출 메서드들
+    # 단순화된 spaCy 기반 추출 메서드들
     # ---------------------------------------------------------------------
     
     def _check_spacy_availability(self) -> bool:
@@ -171,14 +164,34 @@ class ExtractorAgent:
             self.logger.warning(f"spaCy 모델 사용 불가능: {e}")
             return False
     
-    def _extract_with_spacy_strategy(self, input_data: ExtractorIn) -> Tuple[List[Entity], List[Relation]]:
-        """새로운 spaCy 기반 전략 패턴을 사용한 추출"""
+    def _extract_with_spacy(self, input_data: ExtractorIn) -> Tuple[List[Entity], List[Relation]]:
+        """단순화된 spaCy 기반 추출"""
         try:
-            # 전략 선택 및 로딩
-            strategy = self._get_extraction_strategy(input_data.extraction_mode)
+            # 모델 로딩
+            model_name = "ko_core_news_lg" if input_data.extraction_mode == "comprehensive" else "ko_core_news_sm"
+            nlp = self._load_spacy_model(model_name)
             
-            # 전략을 통한 추출
-            entities, relations = strategy.extract(input_data)
+            entities = []
+            relations = []
+            
+            # 각 문서별로 순차 처리
+            for doc_text in input_data.docs:
+                doc = nlp(doc_text)
+                
+                # 엔티티 추출
+                doc_entities = self._extract_entities_from_doc(doc, input_data)
+                entities.extend(doc_entities)
+                
+                # 관계 추출
+                doc_relations = self._extract_relations_from_doc(doc, doc_entities, input_data)
+                relations.extend(doc_relations)
+            
+            # 중복 제거 및 신뢰도 필터링
+            entities = self._deduplicate_entities(entities)
+            entities = [e for e in entities if e.confidence >= input_data.min_confidence]
+            
+            relations = self._deduplicate_relations(relations)
+            relations = [r for r in relations if r.confidence >= input_data.min_confidence]
             
             return entities, relations
             
@@ -186,31 +199,246 @@ class ExtractorAgent:
             self.logger.error(f"spaCy 기반 추출 실패, 레거시 모드로 전환: {e}")
             return self._extract_legacy_mode(input_data)
     
-    def _get_extraction_strategy(self, mode: str):
-        """extraction_mode에 따른 전략 객체를 반환합니다."""
-        if mode not in self._strategies:
+    def _load_spacy_model(self, model_name: str):
+        """spaCy 모델을 로딩합니다."""
+        if model_name not in self._nlp_models:
             try:
-                if mode == "comprehensive":
-                    from .strategies import ComprehensiveStrategy
-                    self._strategies[mode] = ComprehensiveStrategy()
-                elif mode == "fast":
-                    from .strategies import FastStrategy
-                    self._strategies[mode] = FastStrategy()
-                elif mode == "focused":
-                    from .strategies import FocusedStrategy
-                    self._strategies[mode] = FocusedStrategy()
+                import spacy
+                self._nlp_models[model_name] = spacy.load(model_name)
+                self.logger.info(f"spaCy 모델 로딩 완료: {model_name}")
+            except Exception as e:
+                self.logger.error(f"spaCy 모델 로딩 실패: {model_name}, {e}")
+                # fallback to smaller model
+                if model_name == "ko_core_news_lg":
+                    return self._load_spacy_model("ko_core_news_sm")
                 else:
-                    # 기본값은 fast 모드
-                    from .strategies import FastStrategy
-                    self._strategies[mode] = FastStrategy()
-                    
-            except ImportError as e:
-                self.logger.error(f"전략 로딩 실패: {e}")
-                # 전략 로딩 실패 시 레거시 모드로 전환
-                self._legacy_mode = True
-                raise
+                    raise
+        return self._nlp_models[model_name]
+    
+    def _extract_entities_from_doc(self, doc, input_data: ExtractorIn) -> List[Entity]:
+        """문서에서 엔티티를 추출합니다."""
+        entities = []
+        seen_names = set()
+        
+        for ent in doc.ents:
+            # 엔티티 타입 필터링
+            mapped_type = self._map_spacy_label_to_schema(ent.label_)
+            if input_data.entity_types and mapped_type not in input_data.entity_types:
+                continue
+            
+            # 한국어 조사 제거
+            clean_name = self._remove_korean_particles(ent.text)
+            
+            # 중복 제거
+            if clean_name in seen_names:
+                continue
+            seen_names.add(clean_name)
+            
+            # 신뢰도 계산 (spaCy 확률 기반)
+            confidence = self._calculate_entity_confidence(ent, doc)
+            
+            entity = Entity(
+                id=str(uuid.uuid4()),
+                type=mapped_type,
+                name=clean_name,  # 조사 제거된 이름 사용
+                confidence=confidence
+            )
+            entities.append(entity)
+        
+        return entities
+    
+    def _remove_korean_particles(self, text: str) -> str:
+        """한국어 조사를 제거합니다."""
+        korean_particles = [
+            '은', '는', '이', '가', '을', '를', '와', '과', '에', '에서', 
+            '로', '으로', '의', '도', '만', '부터', '까지', '한테', '에게'
+        ]
+        
+        for particle in korean_particles:
+            if text.endswith(particle):
+                return text[:-len(particle)]
+        
+        return text
+    
+    def _extract_relations_from_doc(self, doc, entities: List[Entity], input_data: ExtractorIn) -> List[Relation]:
+        """문서에서 관계를 추출합니다."""
+        relations = []
+        name_to_entity = {ent.name: ent for ent in entities}
+        
+        # 의존구문분석 기반 관계 추출
+        for token in doc:
+            # 주어-동사-목적어 관계
+            if token.dep_ == "nsubj" and token.head.pos_ == "VERB":
+                subject_entity = self._find_entity_for_token(token, name_to_entity)
+                if subject_entity:
+                    # 목적어 찾기
+                    for obj_token in token.head.children:
+                        if obj_token.dep_ in ["obj", "dobj"]:
+                            object_entity = self._find_entity_for_token(obj_token, name_to_entity)
+                            if object_entity:
+                                predicate = self._map_verb_to_relation(token.head.lemma_)
+                                if predicate:
+                                    confidence = self._calculate_relation_confidence(
+                                        subject_entity, object_entity, predicate, doc.text
+                                    )
+                                    relations.append(Relation(
+                                        source=subject_entity.id,
+                                        target=object_entity.id,
+                                        predicate=predicate,
+                                        confidence=confidence
+                                    ))
+        
+        # 패턴 기반 관계 추출 (기본적인 패턴만)
+        pattern_relations = self._extract_relations_by_patterns(doc.text, entities)
+        relations.extend(pattern_relations)
+        
+        return relations
+    
+    def _map_spacy_label_to_schema(self, spacy_label: str) -> str:
+        """spaCy 라벨을 스키마 타입으로 매핑합니다."""
+        mapping = {
+            "PS": "PERSON",
+            "LC": "LOCATION", 
+            "OG": "ORGANIZATION",
+            "DT": "DATETIME",
+            "QT": "QUANTITY"
+        }
+        return mapping.get(spacy_label, "CONCEPT")
+    
+    def _calculate_entity_confidence(self, ent, doc) -> float:
+        """엔티티 신뢰도를 계산합니다 (spaCy 확률 기반)."""
+        # 기본 신뢰도 (엔티티 길이 기반)
+        base_confidence = min(0.9, 0.5 + len(ent.text) * 0.1)
+        
+        # spaCy 확률 (가능한 경우)
+        if hasattr(ent, 'prob') and ent.prob is not None:
+            spacy_prob = ent.prob
+            # 확률을 0.5-0.9 범위로 정규화
+            confidence = 0.5 + (spacy_prob * 0.4)
+        else:
+            confidence = base_confidence
+        
+        return min(1.0, max(0.0, confidence))
+    
+    def _calculate_relation_confidence(self, source_entity: Entity, target_entity: Entity, predicate: str, context: str) -> float:
+        """관계 신뢰도를 계산합니다."""
+        # 기본 신뢰도
+        base_confidence = 0.7
+        
+        # 엔티티 신뢰도 반영
+        entity_confidence = (source_entity.confidence + target_entity.confidence) / 2
+        confidence = (base_confidence + entity_confidence) / 2
+        
+        # 컨텍스트 지원 확인
+        if predicate in context:
+            confidence += 0.1
+        
+        return min(1.0, max(0.0, confidence))
+    
+    def _find_entity_for_token(self, token, name_to_entity: Dict[str, Entity]) -> Optional[Entity]:
+        """토큰에 해당하는 엔티티를 찾습니다."""
+        # 한국어 조사 제거
+        korean_particles = ['은', '는', '이', '가', '을', '를', '와', '과', '에', '에서', '로', '으로', '의', '도', '만']
+        
+        token_text = token.text
+        
+        # 1. 정확한 매칭
+        if token_text in name_to_entity:
+            return name_to_entity[token_text]
+        
+        # 2. 조사 제거 후 매칭
+        for particle in korean_particles:
+            if token_text.endswith(particle):
+                clean_text = token_text[:-len(particle)]
+                if clean_text in name_to_entity:
+                    return name_to_entity[clean_text]
+        
+        # 3. 부분 매칭
+        for entity_name, entity in name_to_entity.items():
+            if entity_name in token_text or token_text in entity_name:
+                return entity
+        
+        return None
+    
+    def _map_verb_to_relation(self, verb_lemma: str) -> Optional[str]:
+        """동사 원형을 관계 타입으로 매핑합니다."""
+        mapping = {
+            "경쟁하다": "COMPETES_WITH",
+            "협력하다": "COLLABORATES_WITH",
+            "인수하다": "ACQUIRED",
+            "투자하다": "INVESTED_IN",
+            "근무하다": "WORKS_FOR",
+            "위치하다": "LOCATED_IN",
+            "소속하다": "BELONGS_TO"
+        }
+        return mapping.get(verb_lemma)
+    
+    def _extract_relations_by_patterns(self, text: str, entities: List[Entity]) -> List[Relation]:
+        """패턴 기반 관계 추출 (기본적인 패턴만)."""
+        relations = []
+        name_to_entity = {ent.name: ent for ent in entities}
+        
+        # 기본 패턴들
+        patterns = [
+            (r"(\w+)(?:와|과)\s+(\w+)(?:은|는)?\s*.*?경쟁", "COMPETES_WITH", True),
+            (r"(\w+)(?:와|과)\s+(\w+)(?:은|는)?\s*.*?협력", "COLLABORATES_WITH", True),
+            (r"(\w+)(?:가|이)\s+(\w+)(?:를|을)\s+인수(?:했|함)", "ACQUIRED", False),
+            (r"(\w+)(?:는|이)\s+(\w+)(?:의)?\s+자회사", "SUBSIDIARY_OF", False),
+        ]
+        
+        for pattern, predicate, bidirectional in patterns:
+            for match in re.finditer(pattern, text):
+                source_name, target_name = match.group(1), match.group(2)
                 
-        return self._strategies[mode]
+                source_entity = name_to_entity.get(source_name)
+                target_entity = name_to_entity.get(target_name)
+                
+                if source_entity and target_entity:
+                    relations.append(Relation(
+                        source=source_entity.id,
+                        target=target_entity.id,
+                        predicate=predicate,
+                        confidence=0.8
+                    ))
+                    
+                    if bidirectional:
+                        relations.append(Relation(
+                            source=target_entity.id,
+                            target=source_entity.id,
+                            predicate=predicate,
+                            confidence=0.8
+                        ))
+        
+        return relations
+    
+    def _deduplicate_entities(self, entities: List[Entity]) -> List[Entity]:
+        """엔티티 중복을 제거합니다."""
+        seen_names = set()
+        unique_entities = []
+        
+        for entity in entities:
+            if entity.name not in seen_names:
+                seen_names.add(entity.name)
+                unique_entities.append(entity)
+        
+        return unique_entities
+    
+    def _deduplicate_relations(self, relations: List[Relation]) -> List[Relation]:
+        """관계 중복을 제거합니다."""
+        seen_keys = set()
+        unique_relations = []
+        
+        for relation in relations:
+            key = (relation.source, relation.target, relation.predicate)
+            if key not in seen_keys:
+                seen_keys.add(key)
+                unique_relations.append(relation)
+        
+        return unique_relations
+
+    # ---------------------------------------------------------------------
+    # 레거시 호환성 메서드들 (기존 테스트 호환성)
+    # ---------------------------------------------------------------------
     
     def _extract_legacy_mode(self, input_data: ExtractorIn) -> Tuple[List[Entity], List[Relation]]:
         """기존 테스트 호환성을 위한 레거시 추출 방식"""
@@ -263,18 +491,8 @@ class ExtractorAgent:
             
         return entities, relations
 
-    # ---------------------------------------------------------------------
-    # 레거시 호환성 메서드들
-    # ---------------------------------------------------------------------
     def _extract_relations_by_patterns_legacy(self, docs: List[str], entities: List[Entity]) -> List[Relation]:
-        """한글 자연어 패턴을 이용해 관계를 추출합니다. (레거시 호환)
-
-        지원 패턴 예시
-        - "A와 B는 경쟁 관계" → COMPETES_WITH (양방향)
-        - "A와 B는 협력 관계" → COLLABORATES_WITH (양방향)
-        - "A가 B를 인수했다" → ACQUIRED (A→B)
-        - "A는 B의 자회사" / "B의 자회사인 A" → SUBSIDIARY_OF (A→B)
-        """
+        """한글 자연어 패턴을 이용해 관계를 추출합니다. (레거시 호환)"""
         relations: List[Relation] = []
 
         # 엔티티 조회 맵
@@ -290,11 +508,7 @@ class ExtractorAgent:
             return new.id
 
         def is_organization(name: str, context: str) -> bool:
-            """간단 휴리스틱으로 조직/회사 여부 판단.
-            - 회사/기관 접미/키워드
-            - 영문 기업 접미(Inc, Corp, Ltd, LLC, GmbH, SAS, PLC, Holdings 등)
-            - 한글 맥락 키워드(회사, 기업, 기관, 그룹, 재단, 은행, 대학)
-            """
+            """간단 휴리스틱으로 조직/회사 여부 판단."""
             org_suffixes = [
                 "Inc", "Corp", "Corporation", "Ltd", "LLC", "GmbH", "AG", "SAS", "PLC", "Holdings",
                 "Co.", "Company", "Limited", "Pte", "BV", "S.p.A", "Srl"
@@ -309,7 +523,7 @@ class ExtractorAgent:
                     return True
 
             # 한글 맥락 내 키워드 공존
-            window = 20  # 이름 주변 윈도우 크기
+            window = 20
             idx = context.find(name)
             if idx != -1:
                 start = max(0, idx - window)
@@ -339,8 +553,8 @@ class ExtractorAgent:
             (re.compile(fr"{name}가 {name}을 인수(하였다|했다)"), "ACQUIRED", "fwd"),
 
             # 자회사 (단방향 A→B)
-            (re.compile(fr"{name}는 {name}의 자회사"), "SUBSIDIARY_OF", "fwd"),  # A는 B의 자회사
-            (re.compile(fr"{name}의 자회사인 {name}"), "SUBSIDIARY_OF", "rev")   # B의 자회사인 A → A→B
+            (re.compile(fr"{name}는 {name}의 자회사"), "SUBSIDIARY_OF", "fwd"),
+            (re.compile(fr"{name}의 자회사인 {name}"), "SUBSIDIARY_OF", "rev")
         ]
 
         for doc in docs:
@@ -353,7 +567,6 @@ class ExtractorAgent:
                         relations.append(Relation(source=a_id, target=b_id, predicate=predicate, confidence=0.9))
                         relations.append(Relation(source=b_id, target=a_id, predicate=predicate, confidence=0.9))
                     elif direction == "fwd":
-                        # 회사 문맥이 아닌데 인수/자회사 추론되는 문제 방지: 조직성 확인
                         if predicate in ("ACQUIRED", "SUBSIDIARY_OF") and not (is_organization(g1, doc) and is_organization(g2, doc)):
                             continue
                         a_id = get_or_create_entity(g1)
@@ -362,12 +575,11 @@ class ExtractorAgent:
                     elif direction == "rev":
                         if predicate in ("ACQUIRED", "SUBSIDIARY_OF") and not (is_organization(g1, doc) and is_organization(g2, doc)):
                             continue
-                        # "B의 자회사인 A" → A→B
                         b_id = get_or_create_entity(g1)
                         a_id = get_or_create_entity(g2)
                         relations.append(Relation(source=a_id, target=b_id, predicate=predicate, confidence=0.9))
 
-        # 중복 제거 (source, target, predicate 기준)
+        # 중복 제거
         sig = set()
         unique: List[Relation] = []
         for r in relations:
@@ -378,19 +590,8 @@ class ExtractorAgent:
             unique.append(r)
         return unique
 
-    # ---------------------------------------------------------------------
-    # 내부 유틸 - 선택적 LLM 호출(Azure GPT-4o)
-    # ---------------------------------------------------------------------
     def _maybe_call_llm(self, input_data: ExtractorIn) -> Tuple[List[Entity], List[Relation]]:
-        """환경변수가 준비된 경우 Azure GPT-4o로 보강 추출을 시도합니다.
-
-        필요 환경변수
-        - AZURE_OPENAI_API_KEY
-        - AZURE_OPENAI_ENDPOINT
-        - AZURE_OPENAI_API_VERSION (옵션, 기본 2024-02-15 예시)
-        - AZURE_OPENAI_DEPLOYMENT (배포 이름, 모델 식별자)
-        실패 시 빈 리스트 반환
-        """
+        """환경변수가 준비된 경우 Azure GPT-4o로 보강 추출을 시도합니다."""
         api_key = os.getenv("AZURE_OPENAI_API_KEY")
         endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
         deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
@@ -399,9 +600,8 @@ class ExtractorAgent:
         if not (api_key and endpoint and deployment):
             return [], []
 
-        # 안전 가드: 의존성 선택적 로드
         try:
-            from openai import AzureOpenAI  # type: ignore
+            from openai import AzureOpenAI
         except Exception as e:
             self._log_structured("llm_dependency_missing", error=str(e))
             return [], []
@@ -409,7 +609,6 @@ class ExtractorAgent:
         try:
             client = AzureOpenAI(api_key=api_key, api_version=api_version, azure_endpoint=endpoint)
 
-            # 입력 문서를 요약해서 프롬프트 크기 제한
             joined = "\n".join(input_data.docs)
             if len(joined) > 6000:
                 joined = joined[:6000] + "\n..."
@@ -433,25 +632,20 @@ class ExtractorAgent:
             )
 
             content = resp.choices[0].message.content if resp and resp.choices else ""
-            # JSON 추출
             data: Dict[str, Any] = {}
             try:
-                # 코드블록 포맷 방지/허용 모두 처리
                 content_str = content.strip()
                 if content_str.startswith("```"):
                     content_str = re.sub(r"^```(json)?", "", content_str).strip()
                     content_str = re.sub(r"```$", "", content_str).strip()
                 data = json.loads(content_str)
             except Exception:
-                # JSON 파싱 실패 시 무시
                 self._log_structured("llm_parse_failed", raw_preview=content[:200])
                 return [], []
 
-            # LLM 결과를 스키마 객체로 변환
             llm_entities: List[Entity] = []
             llm_relations: List[Relation] = []
 
-            # 이름→ID 매핑을 위해 임시 ID 생성
             name_to_id: Dict[str, str] = {}
             for ent in data.get("entities", []) or []:
                 name = str(ent.get("name", "")).strip()
@@ -481,27 +675,17 @@ class ExtractorAgent:
             return [], []
     
     def health_check(self) -> Dict[str, Any]:
-        """
-        에이전트 상태 확인
-        
-        Returns:
-            Dict[str, Any]: 상태 정보
-        """
+        """에이전트 상태 확인"""
         start_time = datetime.now()
         
         try:
-            # TODO: 실제 상태 확인 로직 구현
-            # - Azure GPT-4o API 연결 상태
-            # - 메모리 사용량
-            # - 처리 성능 등
-            
             health_info = {
                 "status": "healthy",
                 "agent_type": "extractor",
                 "timestamp": datetime.now().isoformat(),
                 "health_check_time": (datetime.now() - start_time).total_seconds(),
                 "config": {
-                    "extraction_modes": ["comprehensive", "fast", "focused"],
+                    "extraction_modes": ["comprehensive", "fast"],
                     "supported_entity_types": ["PERSON", "ORGANIZATION", "LOCATION", "CONCEPT", "EVENT"],
                     "supported_languages": ["ko", "en", "ja", "zh"]
                 }

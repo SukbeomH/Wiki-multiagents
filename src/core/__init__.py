@@ -7,7 +7,6 @@
 from .schemas import *
 from .storage import *
 from .workflow import *
-from .utils import *
 
 __all__ = [
     # schemas
@@ -49,7 +48,7 @@ __all__ = [
     
     # utils
     "CacheManager",
-    "DistributedLockManager", 
+    "LockManager", 
     "StorageManager",
     "RDFLibKnowledgeGraphManager",
     "PeriodicScheduler",
@@ -57,6 +56,6 @@ __all__ = [
     "settings",
     "PeriodicScheduler",
     "RDFLibKnowledgeGraphManager",
-    "DistributedLockManager",
+    "LockManager",
     "StorageManager",
 ]

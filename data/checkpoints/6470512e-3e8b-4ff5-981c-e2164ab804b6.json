@@ -1,0 +1,15 @@
+{
+  "checkpoint_id": "6470512e-3e8b-4ff5-981c-e2164ab804b6",
+  "workflow_id": "test_workflow_001",
+  "state": {
+    "step": "extract",
+    "data": {
+      "entities": [
+        "AI",
+        "ML"
+      ]
+    }
+  },
+  "created_at": "2025-08-08T15:40:50.892093",
+  "updated_at": "2025-08-08T15:40:50.892107"
+}

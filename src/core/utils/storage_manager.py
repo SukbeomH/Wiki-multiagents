@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 
 from .cache_manager import CacheManager, CacheConfig
-from .lock_manager import DistributedLockManager
+from .lock_manager import LockManager
 from ..schemas.base import WorkflowState, CheckpointData, CheckpointType
 
 # 개발/테스트용 Redis 호환 클라이언트
@@ -410,7 +410,7 @@ class StorageManager:
         self.redis_manager.cache_config = cache_config
         self.redis_manager.cache_manager = CacheManager(cache_config)
         self.snapshot_manager = SnapshotManager(self.redis_manager)
-        self.lock_manager = DistributedLockManager()  # 환경변수 자동 로드
+        self.lock_manager = LockManager()  # 환경변수 자동 로드
         
         # 직접 접근용 매니저들
         self.cache_manager = self.redis_manager.cache_manager

@@ -12,7 +12,7 @@ AI Knowledge Graph System - Utilities Package
 
 from .storage_manager import StorageManager, RedisConfig, RedisManager, SnapshotManager
 from .cache_manager import CacheManager, CacheConfig
-from .lock_manager import DistributedLockManager
+from .lock_manager import LockManager
 from .scheduler import PeriodicScheduler, WorkflowStateManager
 from .kg_manager import RDFLibKnowledgeGraphManager
 from .config import settings

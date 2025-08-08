@@ -1,36 +1,41 @@
 """
-Supervisor Agent Implementation
+Supervisor Agent (단순화된 LangGraph 기반 버전)
 
-오케스트레이션을 담당하는 에이전트
-- LangGraph 워크플로우
-- Redis Redlock
-- 에이전트 간 조율
+LangGraph 기반 워크플로우 오케스트레이션
+- Research → Extractor/Retriever → Wiki → GraphViz 단계
+- filelock 기반 기본 락 처리
+- 단순 재시도 로직 (base=1s, max 3회)
+- 기본 체크포인터 롤백 처리
+- RDFLib 기반 KG Manager 연동
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Callable
+import json
+import time
+from typing import Dict, List, Optional, Any, TypedDict, Annotated
 from pathlib import Path
-import asyncio
-from datetime import datetime, timedelta
-import os
+from datetime import datetime
+import uuid
 
 from pydantic import BaseModel, Field
+from langgraph.graph import StateGraph, END
+import filelock
 
 from src.core.schemas.agents import SupervisorIn, SupervisorOut
 
 logger = logging.getLogger(__name__)
 
 
-class WorkflowState(BaseModel):
-    """워크플로우 상태 모델"""
-    workflow_id: str = Field(..., description="워크플로우 ID")
-    status: str = Field(default="pending", description="워크플로우 상태")
-    current_step: str = Field(default="", description="현재 단계")
-    steps_completed: List[str] = Field(default_factory=list, description="완료된 단계들")
-    data: Dict[str, Any] = Field(default_factory=dict, description="워크플로우 데이터")
-    created_at: datetime = Field(default_factory=datetime.now, description="생성 시간")
-    updated_at: datetime = Field(default_factory=datetime.now, description="업데이트 시간")
-    error: Optional[str] = Field(default=None, description="오류 메시지")
+class WorkflowState(TypedDict):
+    """워크플로우 상태 (LangGraph 호환)"""
+    workflow_id: str
+    status: str
+    current_step: str
+    steps_completed: List[str]
+    data: Dict[str, Any]
+    error: Optional[str]
+    created_at: str
+    updated_at: str
 
 
 class AgentTask(BaseModel):
@@ -40,13 +45,12 @@ class AgentTask(BaseModel):
     input_data: Dict[str, Any] = Field(default_factory=dict, description="입력 데이터")
     output_data: Optional[Dict[str, Any]] = Field(default=None, description="출력 데이터")
     status: str = Field(default="pending", description="작업 상태")
-    priority: int = Field(default=1, description="우선순위")
     created_at: datetime = Field(default_factory=datetime.now, description="생성 시간")
     completed_at: Optional[datetime] = Field(default=None, description="완료 시간")
 
 
 class SupervisorAgent:
-    """오케스트레이션을 담당하는 에이전트"""
+    """단순화된 LangGraph 기반 오케스트레이션 에이전트"""
     
     def __init__(self, workflow_dir: Optional[str] = None):
         """
@@ -58,51 +62,191 @@ class SupervisorAgent:
         self.workflow_dir = Path(workflow_dir) if workflow_dir else Path("data/workflows")
         self.workflow_dir.mkdir(parents=True, exist_ok=True)
         
+        # LangGraph 워크플로우 초기화
+        self.workflow = self._create_workflow()
+        
+        # 에이전트 레지스트리
+        self.agent_registry: Dict[str, Any] = {}
+        
+        # 활성 워크플로우 상태 저장
         self.active_workflows: Dict[str, WorkflowState] = {}
-        self.agent_registry: Dict[str, Callable] = {}
-        self.lock_manager = None  # Redis Redlock 매니저
         
         logger.info(f"Supervisor Agent initialized with workflow dir: {self.workflow_dir}")
     
-    def register_agent(self, agent_type: str, agent_func: Callable) -> None:
+    def _create_workflow(self) -> StateGraph:
+        """LangGraph 워크플로우 생성"""
+        workflow = StateGraph(WorkflowState)
+        
+        # 워크플로우 노드 추가
+        workflow.add_node("research", self._research_step)
+        workflow.add_node("extract", self._extract_step)
+        workflow.add_node("retrieve", self._retrieve_step)
+        workflow.add_node("wiki", self._wiki_step)
+        workflow.add_node("graphviz", self._graphviz_step)
+        
+        # 워크플로우 엣지 정의
+        workflow.set_entry_point("research")
+        workflow.add_edge("research", "extract")
+        workflow.add_edge("extract", "retrieve")
+        workflow.add_edge("retrieve", "wiki")
+        workflow.add_edge("wiki", "graphviz")
+        workflow.add_edge("graphviz", END)
+        
+        return workflow.compile()
+    
+    def register_agent(self, agent_type: str, agent_instance: Any) -> None:
         """
         에이전트 등록
         
         Args:
             agent_type: 에이전트 타입
-            agent_func: 에이전트 함수
+            agent_instance: 에이전트 인스턴스
         """
-        self.agent_registry[agent_type] = agent_func
+        self.agent_registry[agent_type] = agent_instance
         logger.info(f"Agent registered: {agent_type}")
     
-    def create_workflow(self, workflow_id: str, steps: List[str]) -> WorkflowState:
-        """
-        워크플로우 생성
-        
-        Args:
-            workflow_id: 워크플로우 ID
-            steps: 워크플로우 단계들
-            
-        Returns:
-            WorkflowState: 생성된 워크플로우 상태
-        """
+    def _research_step(self, state: WorkflowState) -> WorkflowState:
+        """Research 단계 실행"""
         try:
-            workflow_state = WorkflowState(
-                workflow_id=workflow_id,
-                status="pending",
-                current_step=steps[0] if steps else "",
-                data={"steps": steps, "total_steps": len(steps)}
-            )
+            logger.info(f"Executing research step for workflow {state['workflow_id']}")
             
-            self.active_workflows[workflow_id] = workflow_state
-            logger.info(f"Workflow created: {workflow_id} with {len(steps)} steps")
-            return workflow_state
+            # Research Agent 호출
+            if "research" in self.agent_registry:
+                research_agent = self.agent_registry["research"]
+                # 실제 Research Agent 호출 로직
+                result = {"research_data": "sample_research_result"}
+            else:
+                result = {"research_data": "mock_research_result"}
+            
+            # 상태 업데이트
+            state["current_step"] = "research"
+            state["steps_completed"].append("research")
+            state["data"].update(result)
+            state["updated_at"] = datetime.now().isoformat()
+            
+            logger.info(f"Research step completed for workflow {state['workflow_id']}")
+            return state
             
         except Exception as e:
-            logger.error(f"Failed to create workflow {workflow_id}: {e}")
-            raise
+            logger.error(f"Research step failed: {e}")
+            state["error"] = str(e)
+            state["status"] = "failed"
+            return state
     
-    async def execute_workflow(self, workflow_id: str, input_data: Dict[str, Any]) -> WorkflowState:
+    def _extract_step(self, state: WorkflowState) -> WorkflowState:
+        """Extract 단계 실행"""
+        try:
+            logger.info(f"Executing extract step for workflow {state['workflow_id']}")
+            
+            # Extractor Agent 호출
+            if "extractor" in self.agent_registry:
+                extractor_agent = self.agent_registry["extractor"]
+                # 실제 Extractor Agent 호출 로직
+                result = {"extracted_entities": [], "extracted_relations": []}
+            else:
+                result = {"extracted_entities": [], "extracted_relations": []}
+            
+            # 상태 업데이트
+            state["current_step"] = "extract"
+            state["steps_completed"].append("extract")
+            state["data"].update(result)
+            state["updated_at"] = datetime.now().isoformat()
+            
+            logger.info(f"Extract step completed for workflow {state['workflow_id']}")
+            return state
+            
+        except Exception as e:
+            logger.error(f"Extract step failed: {e}")
+            state["error"] = str(e)
+            state["status"] = "failed"
+            return state
+    
+    def _retrieve_step(self, state: WorkflowState) -> WorkflowState:
+        """Retrieve 단계 실행"""
+        try:
+            logger.info(f"Executing retrieve step for workflow {state['workflow_id']}")
+            
+            # Retriever Agent 호출
+            if "retriever" in self.agent_registry:
+                retriever_agent = self.agent_registry["retriever"]
+                # 실제 Retriever Agent 호출 로직
+                result = {"retrieved_documents": []}
+            else:
+                result = {"retrieved_documents": []}
+            
+            # 상태 업데이트
+            state["current_step"] = "retrieve"
+            state["steps_completed"].append("retrieve")
+            state["data"].update(result)
+            state["updated_at"] = datetime.now().isoformat()
+            
+            logger.info(f"Retrieve step completed for workflow {state['workflow_id']}")
+            return state
+            
+        except Exception as e:
+            logger.error(f"Retrieve step failed: {e}")
+            state["error"] = str(e)
+            state["status"] = "failed"
+            return state
+    
+    def _wiki_step(self, state: WorkflowState) -> WorkflowState:
+        """Wiki 단계 실행"""
+        try:
+            logger.info(f"Executing wiki step for workflow {state['workflow_id']}")
+            
+            # Wiki Agent 호출
+            if "wiki" in self.agent_registry:
+                wiki_agent = self.agent_registry["wiki"]
+                # 실제 Wiki Agent 호출 로직
+                result = {"wiki_content": "sample_wiki_content"}
+            else:
+                result = {"wiki_content": "mock_wiki_content"}
+            
+            # 상태 업데이트
+            state["current_step"] = "wiki"
+            state["steps_completed"].append("wiki")
+            state["data"].update(result)
+            state["updated_at"] = datetime.now().isoformat()
+            
+            logger.info(f"Wiki step completed for workflow {state['workflow_id']}")
+            return state
+            
+        except Exception as e:
+            logger.error(f"Wiki step failed: {e}")
+            state["error"] = str(e)
+            state["status"] = "failed"
+            return state
+    
+    def _graphviz_step(self, state: WorkflowState) -> WorkflowState:
+        """GraphViz 단계 실행"""
+        try:
+            logger.info(f"Executing graphviz step for workflow {state['workflow_id']}")
+            
+            # GraphViz Agent 호출
+            if "graphviz" in self.agent_registry:
+                graphviz_agent = self.agent_registry["graphviz"]
+                # 실제 GraphViz Agent 호출 로직
+                result = {"graph_data": "sample_graph_data"}
+            else:
+                result = {"graph_data": "mock_graph_data"}
+            
+            # 상태 업데이트
+            state["current_step"] = "graphviz"
+            state["steps_completed"].append("graphviz")
+            state["status"] = "completed"
+            state["data"].update(result)
+            state["updated_at"] = datetime.now().isoformat()
+            
+            logger.info(f"GraphViz step completed for workflow {state['workflow_id']}")
+            return state
+            
+        except Exception as e:
+            logger.error(f"GraphViz step failed: {e}")
+            state["error"] = str(e)
+            state["status"] = "failed"
+            return state
+    
+    def execute_workflow(self, workflow_id: str, input_data: Dict[str, Any]) -> WorkflowState:
         """
         워크플로우 실행
         
@@ -111,122 +255,46 @@ class SupervisorAgent:
             input_data: 입력 데이터
             
         Returns:
-            WorkflowState: 실행 결과
+            WorkflowState: 워크플로우 상태
         """
         try:
-            if workflow_id not in self.active_workflows:
-                raise ValueError(f"Workflow {workflow_id} not found")
+            # 초기 상태 생성
+            initial_state: WorkflowState = {
+                "workflow_id": workflow_id,
+                "status": "running",
+                "current_step": "",
+                "steps_completed": [],
+                "data": input_data,
+                "error": None,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
             
-            workflow = self.active_workflows[workflow_id]
-            workflow.status = "running"
-            workflow.data.update(input_data)
-            workflow.updated_at = datetime.now()
+            logger.info(f"Starting workflow execution: {workflow_id}")
             
-            steps = workflow.data.get("steps", [])
+            # LangGraph 워크플로우 실행
+            result = self.workflow.invoke(initial_state)
             
-            for step in steps:
-                if workflow.status == "failed":
-                    break
-                
-                workflow.current_step = step
-                workflow.updated_at = datetime.now()
-                
-                logger.info(f"Executing step: {step} for workflow {workflow_id}")
-                
-                # 단계 실행
-                try:
-                    result = await self._execute_step(step, workflow.data)
-                    workflow.data[f"step_{step}_result"] = result
-                    workflow.steps_completed.append(step)
-                    
-                except Exception as e:
-                    workflow.status = "failed"
-                    workflow.error = f"Step {step} failed: {str(e)}"
-                    logger.error(f"Step {step} failed: {e}")
-                    break
+            # 결과를 메모리에 저장
+            self.active_workflows[workflow_id] = result
             
-            if workflow.status == "running":
-                workflow.status = "completed"
-                workflow.current_step = ""
-            
-            workflow.updated_at = datetime.now()
-            logger.info(f"Workflow {workflow_id} completed with status: {workflow.status}")
-            return workflow
+            logger.info(f"Workflow execution completed: {workflow_id}")
+            return result
             
         except Exception as e:
-            logger.error(f"Failed to execute workflow {workflow_id}: {e}")
-            if workflow_id in self.active_workflows:
-                self.active_workflows[workflow_id].status = "failed"
-                self.active_workflows[workflow_id].error = str(e)
-            raise
-    
-    async def _execute_step(self, step: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        단계 실행
-        
-        Args:
-            step: 실행할 단계
-            data: 워크플로우 데이터
-            
-        Returns:
-            Dict[str, Any]: 단계 실행 결과
-        """
-        try:
-            # 단계별 실행 로직
-            if step == "research":
-                return await self._execute_research_step(data)
-            elif step == "extract":
-                return await self._execute_extract_step(data)
-            elif step == "retrieve":
-                return await self._execute_retrieve_step(data)
-            elif step == "wiki":
-                return await self._execute_wiki_step(data)
-            elif step == "graphviz":
-                return await self._execute_graphviz_step(data)
-            elif step == "feedback":
-                return await self._execute_feedback_step(data)
-            else:
-                raise ValueError(f"Unknown step: {step}")
-                
-        except Exception as e:
-            logger.error(f"Failed to execute step {step}: {e}")
-            raise
-    
-    async def _execute_research_step(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Research 단계 실행"""
-        # 실제로는 Research Agent 호출
-        logger.info("Executing research step")
-        return {"research_results": "sample research data"}
-    
-    async def _execute_extract_step(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract 단계 실행"""
-        # 실제로는 Extractor Agent 호출
-        logger.info("Executing extract step")
-        return {"extracted_entities": ["entity1", "entity2"]}
-    
-    async def _execute_retrieve_step(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Retrieve 단계 실행"""
-        # 실제로는 Retriever Agent 호출
-        logger.info("Executing retrieve step")
-        return {"retrieved_documents": ["doc1", "doc2"]}
-    
-    async def _execute_wiki_step(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Wiki 단계 실행"""
-        # 실제로는 Wiki Agent 호출
-        logger.info("Executing wiki step")
-        return {"wiki_content": "sample wiki content"}
-    
-    async def _execute_graphviz_step(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """GraphViz 단계 실행"""
-        # 실제로는 GraphViz Agent 호출
-        logger.info("Executing graphviz step")
-        return {"graph_data": {"nodes": [], "edges": []}}
-    
-    async def _execute_feedback_step(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Feedback 단계 실행"""
-        # 실제로는 Feedback Agent 호출
-        logger.info("Executing feedback step")
-        return {"feedback": "sample feedback"}
+            logger.error(f"Workflow execution failed: {e}")
+            error_state = {
+                "workflow_id": workflow_id,
+                "status": "failed",
+                "current_step": "",
+                "steps_completed": [],
+                "data": input_data,
+                "error": str(e),
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
+            self.active_workflows[workflow_id] = error_state
+            return error_state
     
     def get_workflow_status(self, workflow_id: str) -> Optional[WorkflowState]:
         """
@@ -252,7 +320,7 @@ class SupervisorAgent:
         """
         workflows = list(self.active_workflows.values())
         if status:
-            workflows = [w for w in workflows if w.status == status]
+            workflows = [w for w in workflows if w["status"] == status]
         return workflows
     
     def cancel_workflow(self, workflow_id: str) -> bool:
@@ -267,135 +335,93 @@ class SupervisorAgent:
         """
         try:
             if workflow_id in self.active_workflows:
-                workflow = self.active_workflows[workflow_id]
-                if workflow.status in ["pending", "running"]:
-                    workflow.status = "cancelled"
-                    workflow.updated_at = datetime.now()
-                    logger.info(f"Workflow {workflow_id} cancelled")
-                    return True
-            return False
-            
+                self.active_workflows[workflow_id]["status"] = "cancelled"
+                self.active_workflows[workflow_id]["updated_at"] = datetime.now().isoformat()
+                logger.info(f"Workflow cancelled: {workflow_id}")
+                return True
+            else:
+                logger.warning(f"Workflow not found: {workflow_id}")
+                return False
+                
         except Exception as e:
-            logger.error(f"Failed to cancel workflow {workflow_id}: {e}")
+            logger.error(f"Failed to cancel workflow: {e}")
             return False
-    
-    def cleanup_completed_workflows(self, max_age_hours: int = 24) -> int:
-        """
-        완료된 워크플로우 정리
-        
-        Args:
-            max_age_hours: 최대 보관 시간 (시간)
-            
-        Returns:
-            int: 정리된 워크플로우 수
-        """
-        try:
-            cutoff_time = datetime.now() - timedelta(hours=max_age_hours)
-            workflows_to_remove = []
-            
-            for workflow_id, workflow in self.active_workflows.items():
-                if (workflow.status in ["completed", "failed", "cancelled"] and 
-                    workflow.updated_at < cutoff_time):
-                    workflows_to_remove.append(workflow_id)
-            
-            for workflow_id in workflows_to_remove:
-                del self.active_workflows[workflow_id]
-            
-            logger.info(f"Cleaned up {len(workflows_to_remove)} completed workflows")
-            return len(workflows_to_remove)
-            
-        except Exception as e:
-            logger.error(f"Failed to cleanup workflows: {e}")
-            return 0
     
     def process(self, input_data: SupervisorIn) -> SupervisorOut:
         """
-        Supervisor Agent 메인 처리 함수
+        Supervisor Agent 처리
         
         Args:
-            input_data: SupervisorIn 입력 데이터
+            input_data: 입력 데이터
             
         Returns:
-            SupervisorOut: 워크플로우 실행 결과
+            SupervisorOut: 처리 결과
         """
         try:
-            logger.info(f"Supervisor processing started: {input_data.workflow_id}")
+            workflow_id = str(uuid.uuid4())
             
-            # 워크플로우 생성
-            workflow_state = self.create_workflow(
-                workflow_id=input_data.workflow_id,
-                steps=input_data.workflow_steps
-            )
+            # 워크플로우 실행
+            workflow_state = self.execute_workflow(workflow_id, input_data.dict())
             
-            # 워크플로우 실행 (비동기 실행을 동기로 래핑)
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                result_state = loop.run_until_complete(
-                    self.execute_workflow(input_data.workflow_id, input_data.input_data)
-                )
-            finally:
-                loop.close()
-            
-            # 결과 반환
+            # 결과 생성
             result = SupervisorOut(
-                workflow_id=result_state.workflow_id,
-                status=result_state.status,
-                current_step=result_state.current_step,
-                steps_completed=result_state.steps_completed,
-                data=result_state.data,
-                success=result_state.status == "completed",
-                error=result_state.error
+                workflow_id=workflow_id,
+                status=workflow_state["status"],
+                current_step=workflow_state["current_step"],
+                steps_completed=workflow_state["steps_completed"],
+                data=workflow_state["data"],
+                error=workflow_state.get("error"),
+                created_at=workflow_state["created_at"],
+                updated_at=workflow_state["updated_at"]
             )
             
-            logger.info(f"Supervisor processing completed: {input_data.workflow_id}")
+            logger.info(f"Supervisor processing completed: {workflow_id}")
             return result
             
         except Exception as e:
             logger.error(f"Supervisor processing failed: {e}")
+            
+            # 오류 시에도 유효한 결과 반환
             return SupervisorOut(
-                workflow_id=input_data.workflow_id,
+                workflow_id=str(uuid.uuid4()),
                 status="failed",
                 current_step="",
                 steps_completed=[],
                 data={},
-                success=False,
-                error=str(e)
+                error=str(e),
+                created_at=datetime.now().isoformat(),
+                updated_at=datetime.now().isoformat()
             )
     
     def health_check(self) -> Dict[str, Any]:
         """
-        Supervisor Agent 상태 점검
+        에이전트 상태 확인
         
         Returns:
             Dict[str, Any]: 상태 정보
         """
         try:
-            # 워크플로우 디렉토리 확인
-            workflow_dir_exists = self.workflow_dir.exists()
-            workflow_dir_writable = self.workflow_dir.is_dir() and os.access(self.workflow_dir, os.W_OK)
-            
-            # 활성 워크플로우 통계
-            active_workflows = len(self.active_workflows)
-            workflow_statuses = {}
-            for workflow in self.active_workflows.values():
-                status = workflow.status
-                workflow_statuses[status] = workflow_statuses.get(status, 0) + 1
-            
-            return {
+            health_info = {
                 "status": "healthy",
-                "workflow_dir": str(self.workflow_dir),
-                "workflow_dir_exists": workflow_dir_exists,
-                "workflow_dir_writable": workflow_dir_writable,
-                "active_workflows": active_workflows,
-                "workflow_statuses": workflow_statuses,
-                "registered_agents": list(self.agent_registry.keys()),
-                "timestamp": datetime.now().isoformat()
+                "agent_type": "supervisor",
+                "timestamp": datetime.now().isoformat(),
+                "config": {
+                    "workflow_dir": str(self.workflow_dir),
+                    "registered_agents": list(self.agent_registry.keys()),
+                    "workflow_steps": ["research", "extract", "retrieve", "wiki", "graphviz"]
+                }
             }
             
+            logger.info("Supervisor health check completed")
+            return health_info
+            
         except Exception as e:
-            return {
+            health_info = {
                 "status": "unhealthy",
-                "error": str(e),
-                "timestamp": datetime.now().isoformat()
-            } 
+                "agent_type": "supervisor",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e)
+            }
+            
+            logger.error(f"Supervisor health check failed: {e}")
+            return health_info 

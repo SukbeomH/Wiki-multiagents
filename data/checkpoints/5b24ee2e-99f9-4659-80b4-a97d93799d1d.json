@@ -1,0 +1,12 @@
+{
+  "checkpoint_id": "5b24ee2e-99f9-4659-80b4-a97d93799d1d",
+  "workflow_id": "test_workflow_001",
+  "state": {
+    "step": "research",
+    "data": {
+      "query": "AI"
+    }
+  },
+  "created_at": "2025-08-08T15:40:50.891720",
+  "updated_at": "2025-08-08T15:40:50.891724"
+}
