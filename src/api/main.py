@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 
 # 절대 경로 임포트로 수정
-from src.api.routes import workflow, checkpoints, retriever, history
+from src.api.routes import workflow, checkpoints, retriever, history, feedback
 
 # 데이터베이스 초기화를 위한 임포트 추가
 from src.core.storage.database import Base, engine
@@ -24,6 +24,7 @@ app.include_router(history.router)
 app.include_router(workflow.router)
 app.include_router(checkpoints.router)
 app.include_router(retriever.router, prefix="/api/v1")
+app.include_router(feedback.router)
 
 
 if __name__ == "__main__":
