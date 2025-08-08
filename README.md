@@ -19,7 +19,7 @@
 - 📊 **벡터 검색**: FAISS IVF-HNSW 인덱스 기반 유사 문서 검색
 - 📝 **위키 생성**: Jinja2 템플릿 + GPT-4o 스타일링
 - 🕸️ **그래프 시각화**: streamlit-agraph 기반 인터랙티브 그래프
-- 🔄 **워크플로우 관리**: LangGraph + Redis Redlock 기반 오케스트레이션
+- 🔄 **워크플로우 관리**: LangGraph 기반 오케스트레이션(filelock 락)
 - 💬 **피드백 루프**: Slack 연동 Human-in-Loop 시스템
 
 ## 🏗️ 아키텍처
@@ -41,7 +41,7 @@
 - **Backend**: FastAPI, Python 3.11+
 - **Frontend**: Streamlit, streamlit-agraph
 - **AI/LLM**: Azure OpenAI GPT-4o, LangChain, LangGraph
-- **Database**: RDFLib + SQLite (지식 그래프), Redis (캐시)
+- **Database/Storage**: RDFLib + SQLite (지식 그래프), diskcache (캐시)
 - **Vector Store**: FAISS IVF-HNSW (4096차원)
 - **Infrastructure**: Docker, Docker Compose
 - **Testing**: pytest (≥80% 커버리지), pytest-cov
@@ -71,9 +71,9 @@ AZURE_OPENAI_DEPLOY_GPT4O=your_gpt4o_deployment
 # 검색 API (선택)
 # SERPAPI_KEY=your_serpapi_key  # SerpAPI 제거 (DuckDuckGo만 사용)
 
-# 데이터베이스 (Docker 사용 시 기본값)
+# 데이터베이스/스토리지 (Docker 사용 시 기본값)
 RDFLIB_STORE_URI=sqlite:///./data/kg.db
-REDIS_URL=redis://localhost:6379
+API_BASE_URL=http://localhost:8000/api/v1
 ```
 
 ### 3. Docker로 시작 (권장)
@@ -103,10 +103,10 @@ make test
 
 # 서비스 개별 시작
 # Terminal 1: FastAPI
-python run_api.py
+uvicorn src.api.main:app --reload --port 8000
 
-# Terminal 2: Streamlit  
-cd app && streamlit run main.py
+# Terminal 2: Streamlit
+API_BASE_URL=http://localhost:8000/api/v1 streamlit run app/main.py
 ```
 
 ## 🌐 서비스 접근
@@ -117,7 +117,6 @@ cd app && streamlit run main.py
 | **FastAPI Backend** | http://localhost:8000 | REST API 서버 |
 | **API 문서** | http://localhost:8000/docs | Swagger UI |
 | **RDFLib Graph** | ./data/kg.db | 지식 그래프 데이터 |
-| **Redis Commander** | http://localhost:8081 | Redis 모니터링 (dev 프로필) |
 
 ## 📁 프로젝트 구조
 

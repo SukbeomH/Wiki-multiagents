@@ -33,12 +33,16 @@ def create_debate_graph(enable_rag: bool = True, session_id: str = ""):
     workflow.add_edge(AgentType.PRO, AgentType.CON)  # 찬성 → 조건부 라우팅
     workflow.add_edge(AgentType.CON, "INCREMENT_ROUND")  # 반대 → 조건부 라우팅
 
+    # LangGraph API 변경: 매핑은 dict 형태 요구
     workflow.add_conditional_edges(
         "INCREMENT_ROUND",
         lambda s: (
             AgentType.JUDGE if s["current_round"] > s["max_rounds"] else AgentType.PRO
         ),
-        [AgentType.JUDGE, AgentType.PRO],
+        {
+            AgentType.JUDGE: AgentType.JUDGE,
+            AgentType.PRO: AgentType.PRO,
+        },
     )
 
     workflow.set_entry_point(AgentType.PRO)

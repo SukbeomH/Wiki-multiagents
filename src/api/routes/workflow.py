@@ -8,7 +8,7 @@ from pydantic import BaseModel
 # 환경 테스트를 위한 임시 주석처리
 # from langfuse.callback import CallbackHandler
 
-# 임시 Mock 클래스
+# 임시 Mock 클래스 (실제 langfuse 미설치 환경 대응)
 class CallbackHandler:
     def __init__(self, *args, **kwargs):
         pass
@@ -38,7 +38,7 @@ class WorkflowResponse(BaseModel):
     result: Any = None
 
 
-async def debate_generator(debate_graph, initial_state, langfuse_handler):
+async def debate_generator(debate_graph, initial_state, langfuse_handler=None):
     # 그래프에서 청크 스트리밍
     for chunk in debate_graph.stream(
         initial_state,
@@ -106,7 +106,11 @@ async def stream_debate_workflow(request: WorkflowRequest):
         "docs": {},  # RAG 결과 저장
     }
 
-    langfuse_handler = CallbackHandler(session_id=session_id)
+    # langfuse 콜백은 선택적
+    try:
+        langfuse_handler = CallbackHandler(session_id=session_id)
+    except Exception:
+        langfuse_handler = None
 
     # 스트리밍 응답 반환
     return StreamingResponse(

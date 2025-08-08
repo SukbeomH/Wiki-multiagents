@@ -83,7 +83,8 @@ DEBUG=true
 LOG_LEVEL=INFO
 
 # API Configuration
-API_BASE_URL=http://localhost:8000
+# Streamlit에서 사용하는 API_BASE_URL은 /api/v1 프리픽스를 포함하도록 권장
+API_BASE_URL=http://localhost:8000/api/v1
 STREAMLIT_BASE_URL=http://localhost:8501
 
 # Rate Limiting

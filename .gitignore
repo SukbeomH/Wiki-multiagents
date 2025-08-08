@@ -56,3 +56,9 @@ coverage.xml
 .pytype/
 *.db
 *.sqlite3
+
+.env
+
+# Task files
+# tasks.json
+# tasks/ 

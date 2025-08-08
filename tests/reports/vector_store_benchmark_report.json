@@ -1,0 +1,145 @@
+{
+  "timestamp": "2025-08-08 12:50:07",
+  "test_configuration": {
+    "test_data_size": 5000,
+    "dimension": 4096,
+    "nlist": 256,
+    "nprobe": 16,
+    "hnsw_m": 32
+  },
+  "index_build_performance": {
+    "build_time_seconds": 4.503580808639526,
+    "vectors_per_second": 1110.2276638199005,
+    "index_size": 5000,
+    "memory_usage_mb": 78.125
+  },
+  "search_accuracy": {
+    "top1_accuracy": 1.0,
+    "top10_recall": 1.0,
+    "num_queries": 100,
+    "accuracy_std": 0.0,
+    "recall_std": 0.0
+  },
+  "top_k_performance": {
+    "top_k_1": {
+      "avg_search_time_ms": 0.6374835968017578,
+      "min_search_time_ms": 0.4019737243652344,
+      "max_search_time_ms": 1.3532638549804688,
+      "std_search_time_ms": 0.1792999655821392,
+      "avg_results_returned": 1.0,
+      "queries_per_second": 1568.6678135986238
+    },
+    "top_k_5": {
+      "avg_search_time_ms": 0.7189416885375977,
+      "min_search_time_ms": 0.41294097900390625,
+      "max_search_time_ms": 1.653909683227539,
+      "std_search_time_ms": 0.2800147852444774,
+      "avg_results_returned": 5.0,
+      "queries_per_second": 1390.933389930558
+    },
+    "top_k_10": {
+      "avg_search_time_ms": 0.8104562759399414,
+      "min_search_time_ms": 0.47016143798828125,
+      "max_search_time_ms": 1.6672611236572266,
+      "std_search_time_ms": 0.2979184319318787,
+      "avg_results_returned": 10.0,
+      "queries_per_second": 1233.8728561762716
+    },
+    "top_k_20": {
+      "avg_search_time_ms": 0.7927608489990234,
+      "min_search_time_ms": 0.4010200500488281,
+      "max_search_time_ms": 2.0291805267333984,
+      "std_search_time_ms": 0.339510259460418,
+      "avg_results_returned": 20.0,
+      "queries_per_second": 1261.4144622084282
+    },
+    "top_k_50": {
+      "avg_search_time_ms": 0.7487010955810547,
+      "min_search_time_ms": 0.4520416259765625,
+      "max_search_time_ms": 1.5709400177001953,
+      "std_search_time_ms": 0.23761366891471294,
+      "avg_results_returned": 50.0,
+      "queries_per_second": 1335.6465028596176
+    }
+  },
+  "nprobe_optimization": {
+    "nprobe_1": {
+      "avg_search_time_ms": 0.25366942087809247,
+      "avg_accuracy": 0.9,
+      "queries_per_second": 3942.138538174755
+    },
+    "nprobe_4": {
+      "avg_search_time_ms": 0.4439433415730794,
+      "avg_accuracy": 0.9,
+      "queries_per_second": 2252.5396967472834
+    },
+    "nprobe_8": {
+      "avg_search_time_ms": 0.9648005167643229,
+      "avg_accuracy": 0.9,
+      "queries_per_second": 1036.483690280066
+    },
+    "nprobe_16": {
+      "avg_search_time_ms": 0.8635997772216797,
+      "avg_accuracy": 0.9,
+      "queries_per_second": 1157.943791066203
+    },
+    "nprobe_32": {
+      "avg_search_time_ms": 1.2333075205485027,
+      "avg_accuracy": 0.9,
+      "queries_per_second": 810.8277808565206
+    },
+    "nprobe_64": {
+      "avg_search_time_ms": 2.0528237024943032,
+      "avg_accuracy": 0.9,
+      "queries_per_second": 487.1338921042953
+    },
+    "nprobe_128": {
+      "avg_search_time_ms": 2.101469039916992,
+      "avg_accuracy": 0.9,
+      "queries_per_second": 475.8575934287854
+    },
+    "nprobe_256": {
+      "avg_search_time_ms": 1.9112348556518555,
+      "avg_accuracy": 0.9,
+      "queries_per_second": 523.2219353068124
+    }
+  },
+  "batch_search_performance": {
+    "batch_size_1": {
+      "avg_time_per_query_ms": 0.48315882682800293,
+      "queries_per_second": 2069.712782782264,
+      "total_batches": 200
+    },
+    "batch_size_5": {
+      "avg_time_per_query_ms": 0.19677281379699707,
+      "queries_per_second": 25410.014236815798,
+      "total_batches": 40
+    },
+    "batch_size_10": {
+      "avg_time_per_query_ms": 0.1425337791442871,
+      "queries_per_second": 70158.80768780422,
+      "total_batches": 20
+    },
+    "batch_size_20": {
+      "avg_time_per_query_ms": 0.14178872108459473,
+      "queries_per_second": 141054.9432071363,
+      "total_batches": 10
+    },
+    "batch_size_50": {
+      "avg_time_per_query_ms": 0.1411747932434082,
+      "queries_per_second": 354170.87463901506,
+      "total_batches": 4
+    },
+    "batch_size_100": {
+      "avg_time_per_query_ms": 0.15497565269470215,
+      "queries_per_second": 645262.6477850511,
+      "total_batches": 2
+    }
+  },
+  "recommendations": [
+    "FAISS IVF-HNSW 인덱스는 대용량 벡터 데이터에 최적화되어 있습니다.",
+    "nprobe 값을 조정하여 정확도와 속도의 균형을 맞출 수 있습니다.",
+    "배치 검색을 사용하면 여러 쿼리를 효율적으로 처리할 수 있습니다.",
+    "고차원 벡터의 경우 차원 축소 기법을 고려해보세요."
+  ]
+}

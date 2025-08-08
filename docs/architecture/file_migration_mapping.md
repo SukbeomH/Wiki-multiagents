@@ -26,67 +26,67 @@
 ### 1.2 Retriever Agent
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `server/agents/retriever/agent.py` | `src/agents/retriever/agent.py` | ⏳ 대기 | Retriever Agent |
-| `server/agents/retriever/__init__.py` | `src/agents/retriever/__init__.py` | ⏳ 대기 | 패키지 초기화 |
+| `server/agents/retriever/agent.py` | `src/agents/retriever/agent.py` | ✅ 완료 | Retriever Agent |
+| `server/agents/retriever/__init__.py` | `src/agents/retriever/__init__.py` | ✅ 완료 | 패키지 초기화 |
 
 ### 1.3 Extractor Agent
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `server/agents/extractor/__init__.py` | `src/agents/extractor/__init__.py` | ⏳ 대기 | 패키지 초기화 |
-| 구현 파일 | `src/agents/extractor/agent.py` | ⏳ 대기 | Azure GPT-4o 연동 |
+| `server/agents/extractor/__init__.py` | `src/agents/extractor/__init__.py` | ✅ 완료 | 패키지 초기화 |
+| 구현 파일 | `src/agents/extractor/agent.py` | ✅ 완료 | Azure GPT-4o 연동 |
 
 ### 1.4 Wiki Agent
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `server/agents/wiki/__init__.py` | `src/agents/wiki/__init__.py` | ⏳ 대기 | 패키지 초기화 |
-| 구현 파일 | `src/agents/wiki/agent.py` | ⏳ 대기 | Jinja2 템플릿 엔진 |
+| `server/agents/wiki/__init__.py` | `src/agents/wiki/__init__.py` | ✅ 완료 | 패키지 초기화 |
+| 구현 파일 | `src/agents/wiki/agent.py` | ✅ 완료 | Jinja2 템플릿 엔진 |
 
 ### 1.5 GraphViz Agent
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `server/agents/graphviz/__init__.py` | `src/agents/graphviz/__init__.py` | ⏳ 대기 | 패키지 초기화 |
-| 구현 파일 | `src/agents/graphviz/agent.py` | ⏳ 대기 | streamlit-agraph 연동 |
+| `server/agents/graphviz/__init__.py` | `src/agents/graphviz/__init__.py` | ✅ 완료 | 패키지 초기화 |
+| 구현 파일 | `src/agents/graphviz/agent.py` | ✅ 완료 | streamlit-agraph 연동 |
 
 ### 1.6 Supervisor Agent
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `server/agents/supervisor/__init__.py` | `src/agents/supervisor/__init__.py` | ⏳ 대기 | 패키지 초기화 |
-| 구현 파일 | `src/agents/supervisor/agent.py` | ⏳ 대기 | LangGraph 워크플로우 |
+| `server/agents/supervisor/__init__.py` | `src/agents/supervisor/__init__.py` | ✅ 완료 | 패키지 초기화 |
+| 구현 파일 | `src/agents/supervisor/agent.py` | ✅ 완료 | LangGraph 워크플로우 |
 
 ### 1.7 Feedback Agent
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `server/agents/feedback/__init__.py` | `src/agents/feedback/__init__.py` | ⏳ 대기 | 패키지 초기화 |
-| 구현 파일 | `src/agents/feedback/agent.py` | ⏳ 대기 | SQLite + Slack Webhook |
+| `server/agents/feedback/__init__.py` | `src/agents/feedback/__init__.py` | ✅ 완료 | 패키지 초기화 |
+| 구현 파일 | `src/agents/feedback/agent.py` | ✅ 완료 | SQLite + Slack Webhook |
 
 ## 2. 핵심 기능 파일 마이그레이션
 
 ### 2.1 스키마 (Schemas)
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `server/schemas/base.py` | `src/core/schemas/base.py` | ⏳ 대기 | 기본 메시지 스키마 |
-| `server/schemas/agents.py` | `src/core/schemas/agents.py` | ⏳ 대기 | 에이전트 입출력 스키마 |
-| `server/schemas/__init__.py` | `src/core/schemas/__init__.py` | ⏳ 대기 | 패키지 초기화 |
+| `server/schemas/base.py` | `src/core/schemas/base.py` | ✅ 완료 | 기본 메시지 스키마 |
+| `server/schemas/agents.py` | `src/core/schemas/agents.py` | ✅ 완료 | 에이전트 입출력 스키마 |
+| `server/schemas/__init__.py` | `src/core/schemas/__init__.py` | ✅ 완료 | 패키지 초기화 |
 
 ### 2.2 저장소 (Storage)
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `server/retrieval/vector_store.py` | `src/core/storage/vector_store/vector_store.py` | ⏳ 대기 | FAISS 벡터 스토어 |
-| `server/retrieval/search_service.py` | `src/core/storage/vector_store/search_service.py` | ⏳ 대기 | 검색 서비스 |
-| `server/retrieval/__init__.py` | `src/core/storage/vector_store/__init__.py` | ⏳ 대기 | 패키지 초기화 |
-| `server/utils/kg_manager.py` | `src/core/storage/knowledge_graph/kg_manager.py` | ⏳ 대기 | 지식 그래프 관리자 |
-| `server/utils/storage_manager.py` | `src/core/storage/history/storage_manager.py` | ⏳ 대기 | 히스토리 저장소 |
+| `server/retrieval/vector_store.py` | `src/core/storage/vector_store/vector_store.py` | ✅ 완료 | FAISS 벡터 스토어 |
+| `server/retrieval/search_service.py` | `src/core/storage/vector_store/search_service.py` | ✅ 완료 | 검색 서비스 |
+| `server/retrieval/__init__.py` | `src/core/storage/vector_store/__init__.py` | ✅ 완료 | 패키지 초기화 |
+| `server/utils/kg_manager.py` | `src/core/utils/kg_manager.py` | ✅ 완료 | 지식 그래프 관리자 |
+| `server/utils/storage_manager.py` | `src/core/utils/storage_manager.py` | ✅ 완료 | 저장소 관리자 |
 
 ### 2.3 워크플로우 (Workflow)
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `server/workflow/graph.py` | `src/core/workflow/graph.py` | ⏳ 대기 | LangGraph 워크플로우 |
-| `server/workflow/state.py` | `src/core/workflow/state.py` | ⏳ 대기 | 워크플로우 상태 |
-| `server/workflow/agents/agent.py` | `src/core/workflow/agent.py` | ⏳ 대기 | 워크플로우 에이전트 |
-| `server/workflow/agents/con_agent.py` | `src/core/workflow/con_agent.py` | ⏳ 대기 | 반대 에이전트 |
-| `server/workflow/agents/judge_agent.py` | `src/core/workflow/judge_agent.py` | ⏳ 대기 | 판단 에이전트 |
-| `server/workflow/agents/pro_agent.py` | `src/core/workflow/pro_agent.py` | ⏳ 대기 | 찬성 에이전트 |
-| `server/workflow/agents/round_manager.py` | `src/core/workflow/round_manager.py` | ⏳ 대기 | 라운드 관리자 |
+| `server/workflow/graph.py` | `src/core/workflow/graph.py` | ✅ 완료 | LangGraph 워크플로우 |
+| `server/workflow/state.py` | `src/core/workflow/state.py` | ✅ 완료 | 워크플로우 상태 |
+| `server/workflow/agents/agent.py` | `src/core/workflow/agents/agent.py` | ✅ 완료 | 워크플로우 에이전트 |
+| `server/workflow/agents/con_agent.py` | `src/core/workflow/agents/con_agent.py` | ✅ 완료 | 반대 에이전트 |
+| `server/workflow/agents/judge_agent.py` | `src/core/workflow/agents/judge_agent.py` | ✅ 완료 | 판단 에이전트 |
+| `server/workflow/agents/pro_agent.py` | `src/core/workflow/agents/pro_agent.py` | ✅ 완료 | 찬성 에이전트 |
+| `server/workflow/agents/round_manager.py` | `src/core/workflow/agents/round_manager.py` | ✅ 완료 | 라운드 관리자 |
 
 ### 2.4 유틸리티 (Utils)
 | 현재 위치 | 새 위치 | 상태 | 비고 |
@@ -102,45 +102,45 @@
 ### 3.1 메인 애플리케이션
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `server/main.py` | `src/api/main.py` | ⏳ 대기 | FastAPI 메인 앱 |
-| `server/__init__.py` | `src/api/__init__.py` | ⏳ 대기 | 패키지 초기화 |
+| `server/main.py` | `src/api/main.py` | ✅ 완료 | FastAPI 메인 앱 |
+| `server/__init__.py` | `src/api/__init__.py` | ✅ 완료 | 패키지 초기화 |
 
 ### 3.2 라우터 (Routers)
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `server/routers/checkpoints.py` | `src/api/routes/checkpoints.py` | ⏳ 대기 | 체크포인트 API |
-| `server/routers/history.py` | `src/api/routes/history.py` | ⏳ 대기 | 히스토리 API |
-| `server/routers/retriever.py` | `src/api/routes/retriever.py` | ⏳ 대기 | Retriever API |
-| `server/routers/workflow.py` | `src/api/routes/workflow.py` | ⏳ 대기 | 워크플로우 API |
-| `server/routers/__init__.py` | `src/api/routes/__init__.py` | ⏳ 대기 | 패키지 초기화 |
+| `server/routers/checkpoints.py` | `src/api/routes/checkpoints.py` | ✅ 완료 | 체크포인트 API |
+| `server/routers/history.py` | `src/api/routes/history.py` | ✅ 완료 | 히스토리 API |
+| `server/routers/retriever.py` | `src/api/routes/retriever.py` | ✅ 완료 | Retriever API |
+| `server/routers/workflow.py` | `src/api/routes/workflow.py` | ✅ 완료 | 워크플로우 API |
+| `server/routers/__init__.py` | `src/api/routes/__init__.py` | ✅ 완료 | 패키지 초기화 |
 
 ## 4. UI 파일 마이그레이션
 
 ### 4.1 메인 애플리케이션
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `app/main.py` | `src/ui/main.py` | ⏳ 대기 | Streamlit 메인 앱 |
+| `app/main.py` | `app/main.py` | ✅ 유지 | Streamlit 메인 앱 (경로 유지) |
 
 ### 4.2 컴포넌트 (Components)
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `app/components/history.py` | `src/ui/components/history.py` | ⏳ 대기 | 히스토리 컴포넌트 |
-| `app/components/sidebar.py` | `src/ui/components/sidebar.py` | ⏳ 대기 | 사이드바 컴포넌트 |
-| `app/components/__init__.py` | `src/ui/components/__init__.py` | ⏳ 대기 | 패키지 초기화 |
+| `app/components/history.py` | `app/components/history.py` | ✅ 유지 | 히스토리 컴포넌트 |
+| `app/components/sidebar.py` | `app/components/sidebar.py` | ✅ 유지 | 사이드바 컴포넌트 |
+| `app/components/__init__.py` | `app/components/__init__.py` | ✅ 유지 | 패키지 초기화 |
 
 ### 4.3 유틸리티 (Utils)
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `app/utils/state_manager.py` | `src/ui/utils/state_manager.py` | ⏳ 대기 | 상태 관리자 |
+| `app/utils/state_manager.py` | `app/utils/state_manager.py` | ✅ 유지 | 상태 관리자 |
 
 ## 5. 설정 파일 마이그레이션
 
 ### 5.1 환경 설정
 | 현재 위치 | 새 위치 | 상태 | 비고 |
 |-----------|---------|------|------|
-| `config/environment.template` | `config/environments/environment.template` | ⏳ 대기 | 환경 설정 템플릿 |
-| `config/README.md` | `config/README.md` | ⏳ 대기 | 설정 문서 |
-| `config/__init__.py` | `config/__init__.py` | ⏳ 대기 | 패키지 초기화 |
+| `config/environment.template` | `config/environment.template` | ✅ 완료 | 환경 설정 템플릿 |
+| `config/README.md` | `config/README.md` | ✅ 완료 | 설정 문서 |
+| `config/__init__.py` | `config/__init__.py` | ✅ 완료 | 패키지 초기화 |
 
 ### 5.2 템플릿
 | 현재 위치 | 새 위치 | 상태 | 비고 |

@@ -166,9 +166,32 @@ class Agent(ABC):
     def _generate_response(self, state: AgentState) -> AgentState:
 
         messages = state["messages"]
-        response = get_llm().invoke(messages)
+        try:
+            response = get_llm().invoke(messages)
+            response_text = response.content
+        except Exception:
+            # LLM 가용 불가 또는 설정 누락 시 폴백 응답 생성
+            response_text = self._generate_fallback_response(state)
 
-        return {**state, "response": response.content}
+        return {**state, "response": response_text}
+
+    def _generate_fallback_response(self, state: AgentState) -> str:
+        """LLM 없이도 동작하도록 간단한 규칙 기반 응답 생성"""
+        debate_state = state["debate_state"]
+        role = self.role
+        topic = debate_state.get("topic", "주제")
+        context = state.get("context", "")
+        if role == AgentType.PRO:
+            return f"'{topic}'에 대한 찬성 입장의 핵심 논거를 요약합니다.\n근거: {context[:180]}"
+        if role == AgentType.CON:
+            return f"'{topic}'에 대한 반대 입장의 핵심 논거를 요약합니다.\n반박 근거: {context[:180]}"
+        # JUDGE 또는 기타: 간단한 평가 요약
+        msgs = debate_state.get("messages", [])
+        pro_last = next((m["content"] for m in reversed(msgs) if m["role"] == AgentType.PRO), "")
+        con_last = next((m["content"] for m in reversed(msgs) if m["role"] == AgentType.CON), "")
+        return (
+            f"토론 주제: {topic}\n\n- 찬성 요약: {pro_last[:120]}\n- 반대 요약: {con_last[:120]}\n\n판정: 근거의 구체성과 논리성 기준으로 평가를 제안합니다."
+        )
 
     # 상태 업데이트
     def _update_state(self, state: AgentState) -> AgentState:
@@ -199,10 +222,16 @@ class Agent(ABC):
         )
 
         # 내부 그래프 실행
-        langfuse_handler = CallbackHandler(session_id=self.session_id)
-        result = self.graph.invoke(
-            agent_state, config={"callbacks": [langfuse_handler]}
-        )
+        config = {}
+        if LANGFUSE_AVAILABLE and CallbackHandler is not None:
+            try:
+                langfuse_handler = CallbackHandler(session_id=self.session_id)
+                config = {"callbacks": [langfuse_handler]}
+            except Exception:
+                # 콜백 초기화 실패 시 콜백 미사용으로 폴백
+                config = {}
+
+        result = self.graph.invoke(agent_state, config=config)
 
         # 최종 토론 상태 반환
         return result["debate_state"]

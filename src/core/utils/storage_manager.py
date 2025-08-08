@@ -125,7 +125,8 @@ class SnapshotManager:
     
     def _generate_key(self, trace_id: str, checkpoint_type: str = "snapshot") -> str:
         """스냅샷 키 생성 (기존 포맷 유지)"""
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        # 초 단위 키 충돌 방지를 위해 마이크로초까지 포함
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
         return f"{self.key_prefix}:{trace_id}:{checkpoint_type}:{timestamp}"
     
     def _generate_latest_key(self, trace_id: str) -> str:
@@ -482,6 +483,17 @@ class StorageManager:
     async def list_all_checkpoints(self, page: int = 1, page_size: int = 20, checkpoint_type: Optional[str] = None) -> Tuple[List[CheckpointData], int]:
         """전체 체크포인트 목록 조회"""
         return await self.snapshot_manager.list_all_checkpoints(page, page_size, checkpoint_type)
+
+    # 테스트 호환용 직접 키 조회 메서드
+    def get_checkpoint(self, checkpoint_key: str) -> Optional[CheckpointData]:
+        """특정 체크포인트 키로부터 데이터 로드 (테스트 호환용)"""
+        try:
+            data = self.cache_manager.get(checkpoint_key)
+            if not data:
+                return None
+            return CheckpointData.model_validate_json(data)
+        except Exception:
+            return None
     
     def cleanup_expired_checkpoints(self) -> int:
         """만료된 체크포인트 정리"""

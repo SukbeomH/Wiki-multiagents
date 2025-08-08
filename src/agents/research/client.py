@@ -22,7 +22,16 @@ class DuckDuckGoClient:
     성능 최적화된 설정으로 안정적이고 빠른 검색을 제공합니다.
     """
     
-    def __init__(self, timeout: int = 10, max_retries: int = 3, log_level: str = "INFO"):
+    def __init__(
+        self,
+        timeout: int = 10,
+        max_retries: int = 3,
+        log_level: str = "INFO",
+        *,
+        # 테스트 호환성을 위한 선택적 인자들
+        max_results_per_query: Optional[int] = None,
+        retry_attempts: Optional[int] = None,
+    ):
         """
         DuckDuckGo 클라이언트 초기화
         
@@ -33,13 +42,13 @@ class DuckDuckGoClient:
         """
         self.timeout = timeout
         self.max_retries = max_retries
-        self.max_results_per_query = 10  # 기본값 추가
-        self.retry_attempts = max_retries  # 호환성을 위한 별칭
+        # 테스트에서 주입 가능하도록 허용하되 기본값 유지
+        self.max_results_per_query = max_results_per_query if max_results_per_query is not None else 10
+        self.retry_attempts = retry_attempts if retry_attempts is not None else max_retries
+        self.log_level = log_level
         
         # 성능 최적화된 DDGS 설정
-        self.ddgs = DDGS(
-            timeout=timeout
-        )
+        self.ddgs = DDGS(timeout=timeout, verify=True)
         
         # 성능 메트릭
         self.performance_metrics = {

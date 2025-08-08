@@ -30,19 +30,15 @@ __all__ = [
     "FeedbackIn", "FeedbackOut",
     
     # storage
-    # "KnowledgeGraphStore",
-    "FAISSVectorStore", 
-    # "HistoryStore",
+    "FAISSVectorStore",
     "get_db",
     "engine",
     "SessionLocal",
     "Base",
-    # "vector_store",
-    # "search_service",
     
     # workflow
     "DebateState",
-        "create_debate_graph",
+    "create_debate_graph",
     "Agent",
     "ConAgent",
     "JudgeAgent",
@@ -59,9 +55,8 @@ __all__ = [
     "PeriodicScheduler",
     "WorkflowStateManager",
     "settings",
-    "settings",
     "PeriodicScheduler",
     "RDFLibKnowledgeGraphManager",
     "DistributedLockManager",
-    "StorageManager"
+    "StorageManager",
 ]

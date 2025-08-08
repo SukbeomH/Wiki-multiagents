@@ -33,8 +33,13 @@ class RDFLibKnowledgeGraphManager:
             db_path: SQLite 데이터베이스 경로 (기본: 환경변수에서 로드)
             graph_identifier: 그래프 식별자 (기본: 환경변수에서 로드)
         """
-        self.db_path = db_path or self._get_db_path_from_uri(settings.RDFLIB_STORE_URI)
-        self.graph_identifier = graph_identifier or settings.RDFLIB_GRAPH_IDENTIFIER
+        # 런타임 환경변수 우선 적용 (테스트에서 setUp 시 주입되는 값 반영)
+        env_store_uri = os.getenv('RDFLIB_STORE_URI', settings.RDFLIB_STORE_URI)
+        env_graph_id = os.getenv('RDFLIB_GRAPH_IDENTIFIER', settings.RDFLIB_GRAPH_IDENTIFIER)
+        env_ns_prefix = os.getenv('RDFLIB_NAMESPACE_PREFIX', settings.RDFLIB_NAMESPACE_PREFIX)
+
+        self.db_path = db_path or self._get_db_path_from_uri(env_store_uri)
+        self.graph_identifier = graph_identifier or env_graph_id
         
         # 데이터 디렉토리 생성
         data_dir = Path(self.db_path).parent
@@ -44,7 +49,7 @@ class RDFLibKnowledgeGraphManager:
         self._init_sqlite()
         
         # 네임스페이스 설정 (그래프 초기화 전에 설정 필요)
-        self.namespace = Namespace(settings.RDFLIB_NAMESPACE_PREFIX)
+        self.namespace = Namespace(env_ns_prefix)
         
         # RDFLib Graph 초기화 (메모리 기반)
         self.graph = self._initialize_graph()
@@ -319,11 +324,14 @@ class RDFLibKnowledgeGraphManager:
             query_parts = [
                 "SELECT ?entity ?type ?property ?value",
                 "WHERE {",
-                "  ?entity a ?type ."
+                "  ?entity a ?type .",
+                "  FILTER(?type != rdfs:Class)",
+                "  FILTER NOT EXISTS { ?entity kg:source ?s }",
+                "  FILTER NOT EXISTS { ?entity kg:target ?t }"
             ]
             
             if entity_type:
-                query_parts.append(f"  ?type = kg:{entity_type} .")
+                query_parts.append(f"  FILTER(?type = kg:{entity_type})")
             
             if properties:
                 for key, value in properties.items():
@@ -386,13 +394,13 @@ class RDFLibKnowledgeGraphManager:
             ]
             
             if relation_type:
-                query_parts.append(f"  ?type = kg:{relation_type} .")
+                query_parts.append(f"  FILTER(?type = kg:{relation_type})")
             
             if source_id:
-                query_parts.append(f"  ?source = kg:{source_id} .")
+                query_parts.append(f"  FILTER(?source = kg:{source_id})")
             
             if target_id:
-                query_parts.append(f"  ?target = kg:{target_id} .")
+                query_parts.append(f"  FILTER(?target = kg:{target_id})")
             
             query_parts.extend([
                 "  OPTIONAL { ?relation ?property ?value }",
@@ -440,6 +448,15 @@ class RDFLibKnowledgeGraphManager:
         try:
             entity_uri = self.namespace[entity_id]
             
+            # 엔티티가 존재하지 않으면 실패 처리
+            exists = False
+            for _ in self.graph.triples((entity_uri, None, None)):
+                exists = True
+                break
+            if not exists:
+                logger.info(f"Entity not found: {entity_id}")
+                return False
+            
             # 엔티티와 관련된 모든 트리플 삭제
             for s, p, o in self.graph.triples((entity_uri, None, None)):
                 self.graph.remove((s, p, o))
@@ -469,7 +486,16 @@ class RDFLibKnowledgeGraphManager:
         """
         try:
             relation_uri = self.namespace[relation_id]
-            
+
+            # 존재 여부 확인
+            exists = False
+            for _ in self.graph.triples((relation_uri, None, None)):
+                exists = True
+                break
+            if not exists:
+                logger.info(f"Relation not found: {relation_id}")
+                return False
+
             # 관계와 관련된 모든 트리플 삭제
             for s, p, o in self.graph.triples((relation_uri, None, None)):
                 self.graph.remove((s, p, o))

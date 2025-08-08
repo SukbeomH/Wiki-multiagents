@@ -7,64 +7,64 @@
 #### Research Agent
 | 현재 경로 | 새 경로 | 상태 |
 |----------|---------|------|
-| `server/agents/research/__init__.py` | `src/agents/research/__init__.py` | 이동 필요 |
-| `server/agents/research/agent.py` | `src/agents/research/agent.py` | 이동 필요 |
-| `server/agents/research/client.py` | `src/agents/research/client.py` | 이동 필요 |
-| `server/agents/research/cache.py` | `src/agents/research/cache.py` | 이동 필요 |
-| `server/agents/research/config.py` | `src/agents/research/config.py` | 이동 필요 |
+| `server/agents/research/__init__.py` | `src/agents/research/__init__.py` | 완료 |
+| `server/agents/research/agent.py` | `src/agents/research/agent.py` | 완료 |
+| `server/agents/research/client.py` | `src/agents/research/client.py` | 완료 |
+| `server/agents/research/cache.py` | `src/agents/research/cache.py` | 완료 |
+| `server/agents/research/config.py` | `src/agents/research/config.py` | 완료 |
 
 #### Retriever Agent
 | 현재 경로 | 새 경로 | 상태 |
 |----------|---------|------|
-| `server/agents/retriever/__init__.py` | `src/agents/retriever/__init__.py` | 이동 필요 |
-| `server/agents/retriever/agent.py` | `src/agents/retriever/agent.py` | 이동 필요 |
+| `server/agents/retriever/__init__.py` | `src/agents/retriever/__init__.py` | 완료 |
+| `server/agents/retriever/agent.py` | `src/agents/retriever/agent.py` | 완료 |
 
 #### Vector Store
 | 현재 경로 | 새 경로 | 상태 |
 |----------|---------|------|
-| `server/retrieval/vector_store.py` | `src/core/storage/vector_store/faiss_store.py` | 이동 필요 |
+| `server/retrieval/vector_store.py` | `src/core/storage/vector_store/vector_store.py` | 완료 |
 
 #### 기타 에이전트들
 | 현재 경로 | 새 경로 | 상태 |
 |----------|---------|------|
-| `server/agents/extractor/*` | `src/agents/extractor/*` | 이동 필요 |
-| `server/agents/wiki/*` | `src/agents/wiki/*` | 이동 필요 |
-| `server/agents/graphviz/*` | `src/agents/graphviz/*` | 이동 필요 |
-| `server/agents/supervisor/*` | `src/agents/supervisor/*` | 이동 필요 |
-| `server/agents/feedback/*` | `src/agents/feedback/*` | 이동 필요 |
+| `server/agents/extractor/*` | `src/agents/extractor/*` | 완료 |
+| `server/agents/wiki/*` | `src/agents/wiki/*` | 완료 |
+| `server/agents/graphviz/*` | `src/agents/graphviz/*` | 완료 |
+| `server/agents/supervisor/*` | `src/agents/supervisor/*` | 완료 |
+| `server/agents/feedback/*` | `src/agents/feedback/*` | 완료 |
 
 ### 1.2 핵심 기능 파일 이동
 
 #### 스키마
 | 현재 경로 | 새 경로 | 상태 |
 |----------|---------|------|
-| `server/schemas/base.py` | `src/core/schemas/base.py` | 이동 필요 |
-| `server/schemas/agents.py` | `src/core/schemas/agents.py` | 이동 필요 |
+| `server/schemas/base.py` | `src/core/schemas/base.py` | 완료 |
+| `server/schemas/agents.py` | `src/core/schemas/agents.py` | 완료 |
 
 #### 유틸리티
 | 현재 경로 | 새 경로 | 상태 |
 |----------|---------|------|
-| `server/utils/*` | `src/core/utils/*` | 이동 필요 |
+| `server/utils/*` | `src/core/utils/*` | 완료 |
 
 #### 워크플로우
 | 현재 경로 | 새 경로 | 상태 |
 |----------|---------|------|
-| `server/workflow/*` | `src/core/workflow/*` | 이동 필요 |
+| `server/workflow/*` | `src/core/workflow/*` | 완료 |
 
 ### 1.3 API 파일 이동
 
 | 현재 경로 | 새 경로 | 상태 |
 |----------|---------|------|
-| `server/main.py` | `src/api/main.py` | 이동 필요 |
-| `server/routers/*` | `src/api/routes/*` | 이동 필요 |
+| `server/main.py` | `src/api/main.py` | 완료 |
+| `server/routers/*` | `src/api/routes/*` | 완료 |
 
 ### 1.4 UI 파일 이동
 
 | 현재 경로 | 새 경로 | 상태 |
 |----------|---------|------|
-| `app/main.py` | `src/ui/main.py` | 이동 필요 |
-| `app/components/*` | `src/ui/components/*` | 이동 필요 |
-| `app/utils/*` | `src/ui/utils/*` | 이동 필요 |
+| `app/main.py` | `app/main.py` | 유지 |
+| `app/components/*` | `app/components/*` | 유지 |
+| `app/utils/*` | `app/utils/*` | 유지 |
 
 ## 2. Import 경로 변경
 

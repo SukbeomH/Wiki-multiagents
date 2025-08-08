@@ -1,11 +1,13 @@
 import json
+import os
 import requests
 import streamlit as st
 from components.history import save_debate
 from components.sidebar import render_sidebar
 from utils.state_manager import init_session_state, reset_session_state
 
-API_BASE_URL = "http://localhost:8000/api/v1"
+# 환경 변수 기반 API 엔드포인트(기본값: 로컬)
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000/api/v1")
 
 
 class AgentType:

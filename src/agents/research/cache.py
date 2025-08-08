@@ -21,7 +21,14 @@ class ResearchCache:
     LRU 캐시와 TTL 캐시를 조합하여 성능과 메모리 효율성을 균형있게 제공합니다.
     """
     
-    def __init__(self, max_size: int = 128, ttl_seconds: int = 3600, log_level: str = "INFO"):
+    def __init__(
+        self,
+        max_size: int = 128,
+        ttl_seconds: int = 3600,
+        log_level: str = "INFO",
+        *,
+        enable_ttl: Optional[bool] = None,
+    ):
         """
         Research Cache 초기화
         
@@ -32,10 +39,15 @@ class ResearchCache:
         """
         self.max_size = max_size
         self.ttl_seconds = ttl_seconds
+        self.enable_ttl = True if enable_ttl is None else bool(enable_ttl)
         
         # 성능 최적화된 캐시 설정
         self.lru_cache = LRUCache(maxsize=max_size)
-        self.ttl_cache = TTLCache(maxsize=max_size, ttl=ttl_seconds)
+        # 테스트 호환: enable_ttl=False인 경우 TTL 캐시 비활성화 허용
+        if not self.enable_ttl:
+            self.ttl_cache = None
+        else:
+            self.ttl_cache = TTLCache(maxsize=max_size, ttl=ttl_seconds)
         
         # 통계 및 성능 메트릭
         self.stats = {
@@ -342,7 +354,7 @@ class ResearchCache:
             'ttl_cache_size': len(self.ttl_cache) if self.ttl_cache else 0,
             'max_size': self.max_size,
             'ttl_seconds': self.ttl_seconds,
-            'enable_ttl': True, # TTL 캐시는 항상 활성화되므로 이 값은 의미가 없음
+            'enable_ttl': self.enable_ttl,
             'performance': {
                 'total_operations': self.performance_metrics['total_operations'],
                 'avg_get_time': round(self.performance_metrics['avg_get_time'], 6),
@@ -392,7 +404,7 @@ class ResearchCache:
                 'config': {
                     'max_size': self.max_size,
                     'ttl_seconds': self.ttl_seconds,
-                    'enable_ttl': True, # TTL 캐시는 항상 활성화되므로 이 값은 의미가 없음
+                    'enable_ttl': self.enable_ttl,
                     'log_level': self.logger.level # 로거 레벨 사용
                 }
             }

@@ -1,10 +1,11 @@
 import streamlit as st
 import requests
 import json
+import os
 from utils.state_manager import reset_session_state
 
-# API 엔드포인트 기본 URL
-API_BASE_URL = "http://localhost:8000/api/v1"
+# API 엔드포인트 기본 URL (환경변수 우선)
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000/api/v1")
 
 
 # API로 토론 이력 조회

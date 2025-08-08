@@ -278,13 +278,33 @@ class CacheManager:
             bool: 삭제 성공 여부
         """
         try:
-            # 체크포인트 ID로 키 찾기
-            for key in self.checkpoint_cache:
-                data = self.checkpoint_cache.get(key)
-                if data and data.get('checkpoint_id') == checkpoint_id:
-                    return self.checkpoint_cache.delete(key)
+            # 두 캐시에서 모두 검색 (SnapshotManager가 일반 캐시에 JSON 문자열로 저장하는 경우 포함)
+            for cache in [self.checkpoint_cache, self.cache]:
+                for key in cache:
+                    try:
+                        data = cache.get(key)
+                        if data is None:
+                            continue
+                        current_id = None
+                        # JSON 문자열로 저장된 경우 (pydantic v2 직렬화)
+                        if isinstance(data, str):
+                            try:
+                                parsed = CheckpointData.model_validate_json(data)
+                                current_id = parsed.checkpoint_id
+                            except Exception:
+                                current_id = None
+                        # dict로 저장된 경우
+                        elif isinstance(data, dict):
+                            current_id = data.get('checkpoint_id')
+                        # 이미 모델 인스턴스인 경우 (예외적으로)
+                        elif isinstance(data, CheckpointData):
+                            current_id = data.checkpoint_id
+
+                        if current_id == checkpoint_id:
+                            return cache.delete(key)
+                    except Exception:
+                        continue
             return False
-            
         except Exception as e:
             logger.error(f"Checkpoint delete failed for ID '{checkpoint_id}': {e}")
             return False

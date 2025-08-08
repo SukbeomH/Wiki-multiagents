@@ -1,6 +1,14 @@
 import streamlit as st
 from typing import List, Literal
-from duckduckgo_search import DDGS
+
+# ddgs 우선 사용, 미존재 시 구 패키지로 폴백
+try:
+    from ddgs import DDGS  # 최신 패키지명
+except ImportError:  # pragma: no cover
+    try:
+        from duckduckgo_search import DDGS  # 구 패키지명
+    except Exception:  # 최종 안전장치
+        DDGS = None  # type: ignore
 
 # LangChain 조건부 import
 try:
@@ -47,7 +55,7 @@ def improve_search_query(
 
 
 def get_search_content(
-    improved_queries: str,
+    improved_queries: List[str],
     language: str = "ko",
     max_results: int = 5,
 ) -> List[Document]:
@@ -55,18 +63,33 @@ def get_search_content(
     try:
         documents = []
 
-        ddgs = DDGS()
+        if DDGS is None:
+            st.error("검색 모듈(ddgs/duckduckgo_search)을 사용할 수 없습니다.")
+            return []
+
+        ddgs_client = DDGS()
+
+        # 언어 → 지역 코드 매핑 (기본: 전역)
+        region_map = {
+            "ko": "kr-kr",
+            "en": "us-en",
+            "ja": "jp-jp",
+            "zh": "cn-zh",
+        }
+        region = region_map.get(language.lower(), "wt-wt")
 
         # 각 개선된 검색어에 대해 검색 수행
         for query in improved_queries:
             try:
                 # 검색 수행
-                results = ddgs.text(
-                    query,
-                    region=language,
-                    safesearch="moderate",
-                    timelimit="y",  # 최근 1년 내 결과
-                    max_results=max_results,
+                results = list(
+                    ddgs_client.text(
+                        query,
+                        region=region,
+                        safesearch="moderate",
+                        timelimit="y",  # 최근 1년 내 결과
+                        max_results=max_results,
+                    )
                 )
 
                 if not results:

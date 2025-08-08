@@ -33,7 +33,7 @@ class TestDuckDuckGoClient:
             retry_attempts=2
         )
     
-    @patch('server.agents.research.client.DDGS')
+    @patch('src.agents.research.client.DDGS')
     def test_client_initialization(self, mock_ddgs):
         """클라이언트 초기화 테스트"""
         mock_ddgs.return_value = Mock()
@@ -45,7 +45,7 @@ class TestDuckDuckGoClient:
         assert client.retry_attempts == 3  # 기본값
         mock_ddgs.assert_called_once_with(timeout=10, verify=True)
     
-    @patch('server.agents.research.client.DDGS')
+    @patch('src.agents.research.client.DDGS')
     def test_successful_search(self, mock_ddgs):
         """성공적인 검색 테스트"""
         # Mock 설정
@@ -71,7 +71,7 @@ class TestDuckDuckGoClient:
             max_results=10
         )
     
-    @patch('server.agents.research.client.DDGS')
+    @patch('src.agents.research.client.DDGS')
     def test_rate_limit_exception(self, mock_ddgs):
         """Rate limit 예외 처리 테스트"""
         from ddgs.exceptions import RatelimitException
@@ -85,7 +85,7 @@ class TestDuckDuckGoClient:
         with pytest.raises(RatelimitException):
             client.search("test query")
     
-    @patch('server.agents.research.client.DDGS')
+    @patch('src.agents.research.client.DDGS')
     def test_timeout_exception(self, mock_ddgs):
         """타임아웃 예외 처리 테스트"""
         from ddgs.exceptions import TimeoutException
@@ -99,7 +99,7 @@ class TestDuckDuckGoClient:
         with pytest.raises(TimeoutException):
             client.search("test query")
     
-    @patch('server.agents.research.client.DDGS')
+    @patch('src.agents.research.client.DDGS')
     def test_health_check_success(self, mock_ddgs):
         """헬스 체크 성공 테스트"""
         mock_results = [{"title": "Health Test", "body": "Health content"}]

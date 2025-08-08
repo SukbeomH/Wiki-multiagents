@@ -25,10 +25,14 @@ class ResearchAgent:
     성능 최적화된 설정으로 안정적이고 빠른 문서 수집을 제공합니다.
     """
     
-    def __init__(self, 
-                 client: Optional[DuckDuckGoClient] = None,
-                 cache: Optional[ResearchCache] = None,
-                 log_level: str = "INFO"):
+    def __init__(
+        self,
+        client: Optional[DuckDuckGoClient] = None,
+        cache: Optional[ResearchCache] = None,
+        log_level: str = "INFO",
+        *,
+        enable_cache: Optional[bool] = None,
+    ):
         """
         Research Agent 초기화
         
@@ -55,9 +59,16 @@ class ResearchAgent:
         # 캐시 초기화 (최적화된 설정 사용)
         if cache is None:
             cache_config = PERFORMANCE_CONFIG.get_cache_config()
-            self.cache = ResearchCache(**cache_config)
+            # 테스트 호환: enable_cache=False면 캐시 비활성화
+            if enable_cache is False:
+                self.cache = None
+            else:
+                self.cache = ResearchCache(**cache_config)
         else:
             self.cache = cache
+
+        # 외부에서 상태 확인 가능하도록 속성 유지
+        self.enable_cache = self.cache is not None
         
         # 구조화된 초기화 로그
         self._log_structured(
@@ -418,7 +429,7 @@ class ResearchAgent:
                 'client': client_health,
                 'cache': cache_health,
                 'config': {
-                    'enable_cache': True, # 최적화된 설정에서는 항상 활성화
+                    'enable_cache': self.cache is not None,
                     'log_level': self.log_level
                 }
             }

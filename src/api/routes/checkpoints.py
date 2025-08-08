@@ -3,7 +3,7 @@ Checkpointer API 라우터
 
 PRD 요구사항에 따른 상태 스냅샷 저장/조회 REST API 제공
 - 체크포인트 저장/조회/삭제
-- Redis-JSON 연동을 통한 상태 관리
+- 파일 기반 스냅샷(diskcache) 백엔드 사용
 - 입력 검증 및 예외 처리
 """
 
@@ -30,7 +30,7 @@ router = APIRouter(
     }
 )
 
-# 전역 Redis 매니저 및 스냅샷 매니저
+# 전역 스냅샷 매니저 (diskcache 백엔드)
 redis_manager: Optional[RedisManager] = None
 snapshot_manager: Optional[SnapshotManager] = None
 
@@ -49,7 +49,7 @@ async def get_snapshot_manager() -> SnapshotManager:
             logger.error(f"SnapshotManager 초기화 실패: {e}")
             raise HTTPException(
                 status_code=500,
-                detail="Redis 연결 실패"
+                detail="스냅샷 백엔드 초기화 실패"
             )
     
     return snapshot_manager
@@ -107,7 +107,7 @@ async def save_checkpoint(
     """
     체크포인트 저장
     
-    워크플로우 상태를 Redis-JSON에 스냅샷으로 저장합니다.
+    워크플로우 상태를 스냅샷으로 저장합니다.
     """
     try:
         # CheckpointData 객체 생성
@@ -118,7 +118,7 @@ async def save_checkpoint(
             metadata=request.metadata
         )
         
-        # Redis에 저장
+        # 스냅샷 저장
         checkpoint_id = await snapshot_manager.save_checkpoint(checkpoint_data)
         
         logger.info(f"체크포인트 저장 성공: {checkpoint_id}")
@@ -326,22 +326,22 @@ async def health_check(
     """
     Checkpointer API 헬스체크
     
-    Redis 연결 상태 및 시스템 상태를 확인합니다.
+    스냅샷 백엔드 상태를 확인합니다.
     """
     try:
-        # Redis 연결 테스트
+        # 스냅샷 백엔드 상태 테스트
         is_healthy = await snapshot_manager.health_check()
         
         if not is_healthy:
             raise HTTPException(
                 status_code=503,
-                detail="Redis 연결 상태가 불안정합니다"
+                detail="스냅샷 백엔드 상태가 불안정합니다"
             )
         
         return {
             "status": "healthy",
             "timestamp": datetime.utcnow(),
-            "redis_connection": "active",
+            "snapshot_backend": "diskcache",
             "message": "Checkpointer API가 정상적으로 작동 중입니다"
         }
         
