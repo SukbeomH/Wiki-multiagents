@@ -294,11 +294,17 @@ class TestSupervisorAgent:
         # 각 단계에서 호출 여부를 추적하는 Mock 생성
         step_calls = []
         
-        def track_step_call(step_name):
-            def step_function(state):
-                step_calls.append(step_name)
-                return mock_agents[step_name].process.return_value
-            return step_function
+        # 실제 agent.process()가 호출되므로, 각 mock의 process에 사이드이펙트를 주입해 순서를 기록
+        for name in ["research", "extractor", "retriever", "wiki", "graphviz"]:
+            agent = mock_agents.get(name)
+            if agent is None:
+                continue
+            def make_side_effect(step_name):
+                def _side_effect(*args, **kwargs):
+                    step_calls.append(step_name)
+                    return agent.process.return_value if hasattr(agent, "process") else {}
+                return _side_effect
+            agent.process.side_effect = make_side_effect("research" if name=="research" else ("extract" if name=="extractor" else ("retrieve" if name=="retriever" else ("wiki" if name=="wiki" else "graphviz"))))
         
         # Mock 에이전트 등록
         for agent_type, agent in mock_agents.items():

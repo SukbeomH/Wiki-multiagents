@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 from langgraph.graph import StateGraph, END
 import filelock
 
-from src.core.schemas.agents import SupervisorIn, SupervisorOut
+from src.core.schemas.agents import SupervisorIn
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,18 @@ class WorkflowStepError(Exception):
         super().__init__(message)
         self.step_name = step_name
         self.message = message
+
+
+class SupervisorProcessResult(BaseModel):
+    """Supervisor.process 반환용 단순 결과 스키마 (내부용)"""
+    workflow_id: str
+    status: str
+    current_step: str
+    steps_completed: List[str]
+    data: Dict[str, Any]
+    error: Optional[str] = None
+    created_at: str
+    updated_at: str
 
 class WorkflowState(TypedDict):
     """워크플로우 상태 (LangGraph 호환)"""
@@ -348,7 +360,7 @@ class SupervisorAgent:
             logger.error(f"Failed to cancel workflow: {e}")
             return False
     
-    def process(self, input_data: SupervisorIn) -> SupervisorOut:
+    def process(self, input_data: SupervisorIn) -> SupervisorProcessResult:
         """
         Supervisor Agent 처리
         
@@ -364,8 +376,8 @@ class SupervisorAgent:
             # 워크플로우 실행
             workflow_state = self.execute_workflow(workflow_id, input_data.dict())
             
-            # 결과 생성
-            result = SupervisorOut(
+            # 결과 생성 (내부 스키마)
+            result = SupervisorProcessResult(
                 workflow_id=workflow_id,
                 status=workflow_state["status"],
                 current_step=workflow_state["current_step"],
@@ -383,7 +395,7 @@ class SupervisorAgent:
             logger.error(f"Supervisor processing failed: {e}")
             
             # 오류 시에도 유효한 결과 반환
-            return SupervisorOut(
+            return SupervisorProcessResult(
                 workflow_id=str(uuid.uuid4()),
                 status="failed",
                 current_step="",

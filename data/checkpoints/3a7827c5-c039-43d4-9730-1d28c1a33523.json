@@ -1,0 +1,10 @@
+{
+  "checkpoint_id": "3a7827c5-c039-43d4-9730-1d28c1a33523",
+  "workflow_id": "test_workflow",
+  "state": {
+    "step": "test",
+    "data": "test_data"
+  },
+  "created_at": "2025-08-08T16:08:46.183451",
+  "updated_at": "2025-08-08T16:08:46.183453"
+}
