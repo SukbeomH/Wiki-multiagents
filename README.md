@@ -12,6 +12,11 @@
 - **RAG**: FAISS VectorStore, MultiQueryRetriever, Dynamic PDF Loading
 - **Tools**: DDGS (Web Search)
 
+### 2.1 실행/운영 옵션(추가)
+- **로깅 레벨 제어**: `.env`에 `LOG_LEVEL=DEBUG` 또는 `INFO` 설정
+- **그래프 재구성**: 사이드바의 "🔄 그래프 재구성" 버튼으로 캐시/그래프 상태 초기화
+- **RAG 캐시**: PDF 파일명+수정시간(mtime) 기반 키로 `@st.cache_resource` 재사용(동일 세트에선 재빌드 방지)
+
 ### 3. 시스템 아키텍처
 
 본 시스템은 실제 분석팀의 업무 프로세스를 모방한 Supervisor-Worker 멀티 에이전트 아키텍처를 채택합니다. `StateGraph` 를 통해 각 에이전트 간 상태와 작업 흐름을 정교하게 제어합니다.
@@ -35,7 +40,9 @@ graph TD
   end
 ```
 
-- **🧠 Supervisor(감독관)**: 사용자의 질문을 받아 전체 계획을 수립하고, 상황에 맞는 Worker 에이전트(Researcher, Analyst)에게 작업을 동적으로 할당·조율합니다.
+- **🧠 Supervisor(감독관)**: 사용자의 질문을 받아 전체 계획을 수립합니다. 최신 버전에서는 tool_calls 없이 텍스트 라우팅을 사용합니다.
+  - 라우팅 규칙: `ROUTE: researcher` | `ROUTE: analyst` | `ROUTE: END`
+  - 최종 답변 직접 제공 시: `Final Answer: ...` 형식으로 출력
 - **🔍 Researcher(연구원)**: `MultiQueryRetriever` 기반 고급 RAG와 웹 검색(`ddgs`)을 통해 업로드 PDF 및 최신 외부 정보를 수집해 사실 기반 데이터를 제공합니다.
 - **✍️ Analyst(분석가)**: 수집된 데이터를 바탕으로 경제 현상을 심층 분석하고 최종 통찰과 답변을 생성합니다.
 
@@ -115,6 +122,7 @@ AOAI_ENDPOINT="YOUR_AZURE_OPENAI_ENDPOINT"
 AOAI_API_KEY="YOUR_AZURE_OPENAI_API_KEY"
 AOAI_DEPLOY_GPT4O="YOUR_GPT-4O_DEPLOYMENT_NAME"
 AOAI_DEPLOY_EMBED_3_LARGE="YOUR_EMBEDDING_DEPLOYMENT_NAME"
+LOG_LEVEL=INFO
 ```
 
 #### 5.7 애플리케이션 실행
@@ -133,6 +141,10 @@ uv run streamlit run app.py
 
 참고 문서: [uv Installing Python](https://docs.astral.sh/uv/guides/install-python/)
 
+### 5.8 사이드바 기능
+- **🔄 그래프 재구성**: 캐시된 그래프/RAG를 초기화하고 다시 구성합니다. PDF 교체 후 예상대로 반영되지 않을 때 사용하세요.
+- **PDF 업로드**: 업로드 후 위젯 키를 갱신하여 무한 재실행을 방지하고, 1회 재실행 후 상태가 안정화됩니다.
+
 ### 6. 프로젝트 개발 과정 요약
 
 - **초기 기획**: 'AI 한국은행 경제 분석가' 주제 선정, 단일 ReAct 에이전트와 기본 RAG 파이프라인 설계
@@ -140,3 +152,27 @@ uv run streamlit run app.py
 - **아키텍처 고도화**: `langgraph.ipynb`, `agent_supervisor_manual.md` 를 참고해 LangGraph 기반 Supervisor-Worker 멀티 에이전트 아키텍처를 도입
 - **RAG 성능 강화**: `04-Retriever.ipynb` 학습 내용을 반영해 `MultiQueryRetriever` 적용으로 정확성과 깊이 향상
 - **사용자 경험 개선**: 실시간 진행 시각화, 안정적 예외 처리, 업로드 PDF의 동적 반영 등 기능 강화
+
+### 7. 동작 방식(상세)
+- **Supervisor 라우팅(텍스트 기반)**: tool_calls 대신 `ROUTE:` 지시문으로 분기합니다.
+  - `ROUTE: researcher` → Researcher 실행 → Supervisor 복귀
+  - `ROUTE: analyst` → Analyst 실행 → 종료(END)
+  - `ROUTE: END` → 종료
+  - `Final Answer: ...` → 즉시 종료 및 응답 표시
+- **Worker 트리거**:
+  - tool_calls가 없는 경우에도 최근 사용자 입력을 사용해 에이전트를 직접 실행하여 결과를 생성합니다.
+- **RAG 캐시**: PDF 파일명+mtime 기반 키로 동일 세트에선 임베딩/FAISS 재생성 없이 재사용합니다.
+- **로깅**: `[env]`, `[model]`, `[rag]`, `[supervisor]`, `[agent-node:<name>]`, `[run]` 접두사로 주요 상태/에러를 콘솔에 출력합니다.
+
+### 8. 트러블슈팅
+- 400 오류(`tool_calls must be followed by tool messages`)는 Supervisor tool_calls 미응답이 원인이며, 텍스트 라우팅으로 해소했습니다.
+- 최종 응답이 비어있는 경우:
+  - Analyst 경로 메시지가 수집되지 않는 문제를 UI에서 보완(Analyst 메시지 수집). 여전히 비면 Supervisor가 `Final Answer:`를 반환하도록 질문을 다시 시도하세요.
+- RAG가 반복 빌드될 때: PDF 리스트가 동일한지, 수정시간이 바뀌지 않았는지 확인. 필요 시 "🔄 그래프 재구성"으로 초기화.
+- 로그가 적을 때: `.env`의 `LOG_LEVEL=DEBUG`로 상세 로그 활성화.
+
+### 9. 변경 이력(요약)
+- Supervisor: tool_calls → 텍스트 라우팅으로 전환(ROUTE/Final Answer)
+- Worker: tool_calls 없을 때도 직접 실행하도록 보완
+- UI: Analyst 메시지 최종 응답 수집, 업로더 무한 재실행 방지 키 적용
+- RAG: 파일명+mtime 기반 캐시 키, `@st.cache_resource` 최적화

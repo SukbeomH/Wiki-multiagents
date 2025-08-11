@@ -1,0 +1,36 @@
+# Task ID: 4
+# Title: AgentState 및 기본 에이전트 구조 정의
+# Status: done
+# Dependencies: 2
+# Priority: medium
+# Description: LangGraph에서 사용할 AgentState TypedDict를 정의하고 에이전트 생성을 위한 기본 구조를 구현합니다.
+# Details:
+1. agents.py 파일 생성:
+```python
+from typing import TypedDict, List, Annotated
+from langchain_core.messages import BaseMessage
+from langgraph.graph.message import add_messages
+from langchain.tools import Tool
+from duckduckgo_search import DDGS
+from config import llm
+
+class AgentState(TypedDict):
+    messages: Annotated[List[BaseMessage], add_messages]
+    next: str
+
+def web_search_tool(query: str) -> str:
+    """웹 검색을 수행하는 도구"""
+    ddgs = DDGS()
+    results = ddgs.text(query, max_results=5)
+    return '\n'.join([f"{r['title']}: {r['body']}" for r in results])
+
+def create_agent(name: str, system_prompt: str, tools: List[Tool] = None):
+    """에이전트 생성 함수"""
+    if tools:
+        llm_with_tools = llm.bind_tools(tools)
+        return llm_with_tools
+    return llm
+```
+
+# Test Strategy:
+AgentState 타입 검증, 웹 검색 도구 기능 테스트, 기본 에이전트 생성 확인

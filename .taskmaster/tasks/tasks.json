@@ -1,0 +1,324 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "프로젝트 환경 설정 및 의존성 설치",
+        "description": "uv 패키지 매니저를 사용하여 Python 환경을 구성하고 필요한 라이브러리들을 설치합니다.",
+        "details": "1. uv 설치: `curl -LsSf https://astral.sh/uv/install.sh | sh`\n2. Python 3.9+ 설치: `uv python install 3.12`\n3. 가상환경 생성: `uv venv`\n4. requirements.txt 생성 및 필수 패키지 정의:\n   - streamlit\n   - langchain\n   - langchain-azure-openai\n   - langgraph\n   - faiss-cpu\n   - pymupdf\n   - duckduckgo-search\n   - python-dotenv\n5. 의존성 설치: `uv pip install -r requirements.txt`\n6. .env 파일 생성 및 Azure OpenAI 설정 변수 정의\n7. data/ 디렉토리 생성",
+        "testStrategy": "가상환경 활성화 후 모든 패키지 import 테스트, .env 파일 로드 확인, data/ 디렉토리 존재 확인",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Azure OpenAI 서비스 연동 구현",
+        "description": "Azure OpenAI Service와의 연결을 설정하고 Chat Completions 및 Embeddings API를 구성합니다.",
+        "details": "1. config.py 파일 생성:\n```python\nimport os\nfrom dotenv import load_dotenv\nfrom langchain_azure_openai import AzureChatOpenAI, AzureOpenAIEmbeddings\n\nload_dotenv()\n\n# Azure OpenAI 설정\nAZURE_OPENAI_ENDPOINT = os.getenv('AZURE_OPENAI_ENDPOINT')\nAZURE_OPENAI_API_KEY = os.getenv('AZURE_OPENAI_API_KEY')\nAZURE_OPENAI_API_VERSION = os.getenv('AZURE_OPENAI_API_VERSION', '2024-02-01')\n\n# LLM 및 Embeddings 초기화\nllm = AzureChatOpenAI(\n    azure_endpoint=AZURE_OPENAI_ENDPOINT,\n    api_key=AZURE_OPENAI_API_KEY,\n    api_version=AZURE_OPENAI_API_VERSION,\n    deployment_name='gpt-4o',\n    temperature=0.1\n)\n\nembeddings = AzureOpenAIEmbeddings(\n    azure_endpoint=AZURE_OPENAI_ENDPOINT,\n    api_key=AZURE_OPENAI_API_KEY,\n    api_version=AZURE_OPENAI_API_VERSION,\n    deployment_name='text-embedding-ada-002'\n)\n```",
+        "testStrategy": "간단한 채팅 완성 요청과 텍스트 임베딩 생성 테스트를 통해 API 연결 확인",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "동적 RAG 파이프라인 구축",
+        "description": "data/ 폴더의 PDF 파일들을 동적으로 스캔하여 FAISS 벡터 데이터베이스를 구축하는 RAG 시스템을 구현합니다.",
+        "details": "1. rag_pipeline.py 파일 생성:\n```python\nimport glob\nfrom langchain_community.document_loaders import PyMuPDFLoader\nfrom langchain.text_splitter import RecursiveCharacterTextSplitter\nfrom langchain_community.vectorstores import FAISS\nfrom config import embeddings\n\ndef build_rag_pipeline():\n    documents = []\n    pdf_files = glob.glob('data/*.pdf')\n    \n    for pdf_file in pdf_files:\n        loader = PyMuPDFLoader(pdf_file)\n        docs = loader.load()\n        documents.extend(docs)\n    \n    if not documents:\n        return None\n    \n    text_splitter = RecursiveCharacterTextSplitter(\n        chunk_size=1000,\n        chunk_overlap=200\n    )\n    splits = text_splitter.split_documents(documents)\n    \n    vectorstore = FAISS.from_documents(splits, embeddings)\n    return vectorstore.as_retriever(search_kwargs={'k': 5})\n```",
+        "testStrategy": "샘플 PDF 파일을 data/ 폴더에 추가하고 벡터스토어 생성 및 검색 기능 테스트",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "AgentState 및 기본 에이전트 구조 정의",
+        "description": "LangGraph에서 사용할 AgentState TypedDict를 정의하고 에이전트 생성을 위한 기본 구조를 구현합니다.",
+        "details": "1. agents.py 파일 생성:\n```python\nfrom typing import TypedDict, List, Annotated\nfrom langchain_core.messages import BaseMessage\nfrom langgraph.graph.message import add_messages\nfrom langchain.tools import Tool\nfrom duckduckgo_search import DDGS\nfrom config import llm\n\nclass AgentState(TypedDict):\n    messages: Annotated[List[BaseMessage], add_messages]\n    next: str\n\ndef web_search_tool(query: str) -> str:\n    \"\"\"웹 검색을 수행하는 도구\"\"\"\n    ddgs = DDGS()\n    results = ddgs.text(query, max_results=5)\n    return '\\n'.join([f\"{r['title']}: {r['body']}\" for r in results])\n\ndef create_agent(name: str, system_prompt: str, tools: List[Tool] = None):\n    \"\"\"에이전트 생성 함수\"\"\"\n    if tools:\n        llm_with_tools = llm.bind_tools(tools)\n        return llm_with_tools\n    return llm\n```",
+        "testStrategy": "AgentState 타입 검증, 웹 검색 도구 기능 테스트, 기본 에이전트 생성 확인",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Researcher 에이전트 구현",
+        "description": "정보 수집을 담당하는 Researcher 에이전트를 구현하여 RAG 시스템과 웹 검색을 통해 데이터를 수집합니다.",
+        "details": "1. agents.py에 Researcher 에이전트 추가:\n```python\nfrom langchain_core.messages import HumanMessage, SystemMessage\n\nRESEARCHER_PROMPT = \"\"\"\n당신은 경제 분석을 위한 전문 연구원입니다.\n사용자의 질문에 대해 다음 소스에서 관련 정보를 수집하세요:\n1. 업로드된 PDF 문서 (RAG 시스템)\n2. 최신 웹 뉴스 및 정보\n\n수집한 정보는 신뢰할 수 있는 출처를 기반으로 하며,\n구체적인 데이터와 사실을 중심으로 정리해주세요.\n\"\"\"\n\ndef researcher_node(state: AgentState, retriever=None):\n    messages = state['messages']\n    last_message = messages[-1].content\n    \n    # RAG 검색\n    context = \"\"\n    if retriever:\n        docs = retriever.get_relevant_documents(last_message)\n        context = \"\\n\".join([doc.page_content for doc in docs])\n    \n    # 웹 검색\n    web_results = web_search_tool(last_message)\n    \n    # 연구 결과 생성\n    research_prompt = f\"\"\"\n    {RESEARCHER_PROMPT}\n    \n    질문: {last_message}\n    \n    PDF 문서 정보:\n    {context}\n    \n    웹 검색 결과:\n    {web_results}\n    \n    위 정보를 바탕으로 질문과 관련된 핵심 정보를 정리해주세요.\n    \"\"\"\n    \n    response = llm.invoke([SystemMessage(content=research_prompt)])\n    return {\"messages\": [response], \"next\": \"analyst\"}\n```",
+        "testStrategy": "샘플 경제 질문으로 RAG 검색 및 웹 검색 결과 통합 테스트, 출력 형식 검증",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          4
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Analyst 에이전트 구현",
+        "description": "Researcher가 수집한 정보를 바탕으로 심층 분석을 수행하는 Analyst 에이전트를 구현합니다.",
+        "details": "1. agents.py에 Analyst 에이전트 추가:\n```python\nANALYST_PROMPT = \"\"\"\n당신은 경제 분석 전문가입니다.\nResearcher가 수집한 정보를 바탕으로 다음과 같은 심층 분석을 수행하세요:\n\n1. 핵심 트렌드 및 패턴 식별\n2. 원인과 결과 관계 분석\n3. 잠재적 영향 및 시사점 도출\n4. 근거 기반 결론 제시\n\n분석 결과는 전문적이면서도 이해하기 쉽게 구조화해주세요.\n\"\"\"\n\ndef analyst_node(state: AgentState):\n    messages = state['messages']\n    research_info = \"\"\n    \n    # 이전 메시지들에서 연구 정보 추출\n    for msg in messages:\n        if hasattr(msg, 'content'):\n            research_info += msg.content + \"\\n\"\n    \n    analysis_prompt = f\"\"\"\n    {ANALYST_PROMPT}\n    \n    연구 정보:\n    {research_info}\n    \n    위 정보를 바탕으로 종합적인 경제 분석 보고서를 작성해주세요.\n    \n    보고서 구조:\n    ## 핵심 요약\n    ## 상세 분석\n    ## 시사점 및 전망\n    ## 결론\n    \"\"\"\n    \n    response = llm.invoke([SystemMessage(content=analysis_prompt)])\n    return {\"messages\": [response], \"next\": \"END\"}\n```",
+        "testStrategy": "Researcher 출력을 입력으로 하여 구조화된 분석 보고서 생성 테스트, 보고서 형식 검증",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Supervisor 에이전트 구현",
+        "description": "작업을 조율하고 다음 에이전트를 결정하는 Supervisor 에이전트를 구현합니다.",
+        "details": "1. agents.py에 Supervisor 에이전트 추가:\n```python\nfrom langchain_core.pydantic_v1 import BaseModel, Field\nfrom typing import Literal\n\nclass RouteResponse(BaseModel):\n    next: Literal[\"researcher\", \"analyst\", \"END\"] = Field(\n        description=\"다음에 호출할 에이전트 선택\"\n    )\n\nSUPERVISOR_PROMPT = \"\"\"\n당신은 경제 분석팀의 감독관입니다.\n사용자의 질문을 분석하여 적절한 작업 순서를 결정하세요.\n\n일반적인 작업 흐름:\n1. researcher: 정보 수집이 필요한 경우\n2. analyst: 수집된 정보의 분석이 필요한 경우\n3. END: 분석이 완료된 경우\n\n현재 대화 상태를 고려하여 다음 단계를 결정하세요.\n\"\"\"\n\ndef supervisor_node(state: AgentState):\n    messages = state['messages']\n    \n    supervisor_llm = llm.with_structured_output(RouteResponse)\n    \n    response = supervisor_llm.invoke([\n        SystemMessage(content=SUPERVISOR_PROMPT),\n        HumanMessage(content=f\"현재 메시지들: {[m.content for m in messages[-3:]]}\")\n    ])\n    \n    return {\"next\": response.next}\n```",
+        "testStrategy": "다양한 대화 상태에서 적절한 다음 에이전트 선택 테스트, 라우팅 로직 검증",
+        "priority": "medium",
+        "dependencies": [
+          6
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "LangGraph 워크플로우 구성",
+        "description": "StateGraph를 사용하여 모든 에이전트를 연결하고 전체 워크플로우를 구성합니다.",
+        "details": "1. graph.py 파일 생성:\n```python\nfrom langgraph.graph import StateGraph, END\nfrom agents import AgentState, supervisor_node, researcher_node, analyst_node\n\ndef create_graph(retriever=None):\n    workflow = StateGraph(AgentState)\n    \n    # 노드 추가\n    workflow.add_node(\"supervisor\", supervisor_node)\n    workflow.add_node(\"researcher\", lambda state: researcher_node(state, retriever))\n    workflow.add_node(\"analyst\", analyst_node)\n    \n    # 엣지 설정\n    workflow.set_entry_point(\"supervisor\")\n    \n    workflow.add_conditional_edges(\n        \"supervisor\",\n        lambda x: x[\"next\"],\n        {\n            \"researcher\": \"researcher\",\n            \"analyst\": \"analyst\",\n            \"END\": END\n        }\n    )\n    \n    workflow.add_edge(\"researcher\", \"supervisor\")\n    workflow.add_edge(\"analyst\", END)\n    \n    return workflow.compile()\n```",
+        "testStrategy": "그래프 컴파일 성공 확인, 샘플 입력으로 전체 워크플로우 실행 테스트",
+        "priority": "high",
+        "dependencies": [
+          7
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Streamlit UI 기본 구조 구현",
+        "description": "채팅 인터페이스, 파일 업로드, 사이드바를 포함한 Streamlit 기본 UI를 구현합니다.",
+        "details": "1. app.py 파일 생성:\n```python\nimport streamlit as st\nimport os\nfrom rag_pipeline import build_rag_pipeline\nfrom graph import create_graph\nfrom langchain_core.messages import HumanMessage\n\nst.set_page_config(\n    page_title=\"지능형 경제 분석 시스템\",\n    page_icon=\"📊\",\n    layout=\"wide\"\n)\n\nst.title(\"📊 지능형 경제 분석 시스템\")\nst.markdown(\"경제 전문가를 위한 AI 기반 분석 도구\")\n\n# 사이드바 - 파일 업로드\nwith st.sidebar:\n    st.header(\"📁 문서 업로드\")\n    uploaded_files = st.file_uploader(\n        \"분석에 사용할 PDF 파일을 업로드하세요\",\n        type=['pdf'],\n        accept_multiple_files=True\n    )\n    \n    if uploaded_files:\n        for uploaded_file in uploaded_files:\n            file_path = os.path.join(\"data\", uploaded_file.name)\n            with open(file_path, \"wb\") as f:\n                f.write(uploaded_file.getbuffer())\n        st.success(f\"{len(uploaded_files)}개 파일이 업로드되었습니다.\")\n        st.rerun()\n\n# 메인 채팅 인터페이스\nif \"messages\" not in st.session_state:\n    st.session_state.messages = []\n\nfor message in st.session_state.messages:\n    with st.chat_message(message[\"role\"]):\n        st.markdown(message[\"content\"])\n\nif prompt := st.chat_input(\"경제 관련 질문을 입력하세요...\"):\n    st.session_state.messages.append({\"role\": \"user\", \"content\": prompt})\n    with st.chat_message(\"user\"):\n        st.markdown(prompt)\n```",
+        "testStrategy": "Streamlit 앱 실행 확인, 파일 업로드 기능 테스트, 채팅 UI 동작 확인",
+        "priority": "high",
+        "dependencies": [
+          8
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "실시간 상태 시각화 및 전체 시스템 통합",
+        "description": "LangGraph 스트리밍과 st.status를 연동하여 실시간 진행 상황을 표시하고 전체 시스템을 통합합니다.",
+        "details": "1. app.py에 실시간 상태 시각화 추가:\n```python\n# 채팅 응답 처리 부분\nwith st.chat_message(\"assistant\"):\n    with st.status(\"분석팀이 작업을 시작합니다...\", expanded=True) as status:\n        # RAG 파이프라인 구축\n        retriever = build_rag_pipeline()\n        if retriever:\n            st.write(\"📚 업로드된 문서를 분석에 활용합니다.\")\n        \n        # 그래프 생성 및 실행\n        graph = create_graph(retriever)\n        \n        response_content = \"\"\n        \n        # 스트리밍 실행\n        for chunk in graph.stream(\n            {\"messages\": [HumanMessage(content=prompt)]},\n            stream_mode=\"updates\"\n        ):\n            for node_name, node_output in chunk.items():\n                if node_name == \"researcher\":\n                    status.update(label=\"🔍 Researcher가 정보를 수집 중...\", state=\"running\")\n                    st.write(\"📊 관련 데이터 및 최신 정보 수집 완료\")\n                elif node_name == \"analyst\":\n                    status.update(label=\"📈 Analyst가 보고서를 작성 중...\", state=\"running\")\n                    st.write(\"🎯 심층 분석 및 보고서 생성 완료\")\n                    if \"messages\" in node_output:\n                        response_content = node_output[\"messages\"][-1].content\n        \n        status.update(label=\"✅ 분석 완료!\", state=\"complete\")\n    \n    if response_content:\n        st.markdown(response_content)\n        st.session_state.messages.append({\"role\": \"assistant\", \"content\": response_content})\n\n# 메인 실행\nif __name__ == \"__main__\":\n    pass\n```\n2. 실행 스크립트 추가: `uv run streamlit run app.py`",
+        "testStrategy": "전체 시스템 통합 테스트: 파일 업로드 → 질문 입력 → 실시간 상태 표시 → 최종 분석 결과 출력까지의 전체 플로우 검증",
+        "priority": "high",
+        "dependencies": [
+          9
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "실제 동작 검증(E2E) 테스트 및 문서화",
+        "description": "통합된 시스템(app.py)이 실제 환경에서 문제 없이 동작함을 검증하고, 실행 로그와 스크린샷을 수집하여 README에 반영합니다.",
+        "details": "1. 환경 검증 단계:\n   - .env 파일 필수 변수 확인 (AOAI_ENDPOINT, AOAI_API_KEY, AOAI_DEPLOY_GPT4O, AOAI_DEPLOY_EMBED_3_LARGE)\n   - uv venv 생성 및 활성화 확인\n   - uv pip install -r requirements.txt 설치 완료 검증\n   - 환경 변수 누락 시 에러 메시지 가독성 확인\n\n2. 앱 실행 검증:\n   - uv run streamlit run app.py 또는 streamlit run app.py로 실행\n   - 초기 로딩 중 오류 없음 확인\n   - 페이지 제목 및 기본 UI 요소 정상 표시 확인\n\n3. 파일 업로드 및 RAG 기능 검증:\n   - data/ 폴더 비어있을 때 기본 데이터 경고/안내 표시 확인\n   - PDF 1~2개 업로드 후 캐시 초기화(st.cache_resource.clear()) 및 재실행(st.rerun) 동작 확인\n   - 업로드한 파일명이 사이드바에 정상 표시되는지 확인\n   - 벡터 인덱스 생성 및 RAG 파이프라인 구축 확인\n\n4. 질의 및 멀티 에이전트 라우팅 검증:\n   - 예시 질문 입력 시 st.status 단계별 표시 확인 (Supervisor/Researcher/Analyst)\n   - Researcher 도구 호출(bok_document_search, web_search) 정상 동작 확인\n   - ddgs 검색 실패/네트워크 예외 시 복구 동작 및 사용자 친화적 안내 확인\n   - Analyst 결과 생성 및 Supervisor 최종 응답(Final Answer) 수신 확인\n   - API rate limit/timeout 상황 시 메시지 처리 확인\n\n5. 예외 및 에러 처리 검증:\n   - 환경 변수 누락/잘못된 경우 에러 메시지 가독성 확인\n   - 네트워크 연결 실패 시 사용자 친화적 안내 확인\n   - 파일 업로드 실패 시 적절한 에러 처리 확인\n\n6. 산출물 생성:\n   - 각 단계별 실행 로그 수집 및 정리\n   - 주요 기능 동작 스크린샷 캡처 (업로드, 상태 변화, 최종 응답)\n   - README의 실행 가이드 및 트러블슈팅 섹션 업데이트\n   - 발견된 문제점 및 개선사항을 이슈화 또는 TODO로 반영",
+        "testStrategy": "1. 체크리스트 기반 검증:\n   - 환경 설정부터 최종 응답까지 전체 플로우 단계별 체크\n   - 각 검증 항목별 통과/실패 기록 및 스크린샷 수집\n   - 예외 상황 시나리오별 테스트 (환경 변수 누락, 네트워크 오류, 파일 업로드 실패 등)\n\n2. 실제 사용자 시나리오 테스트:\n   - 신규 사용자 관점에서 README 가이드만으로 설치 및 실행 가능한지 확인\n   - 다양한 경제 관련 질문으로 멀티 에이전트 시스템 동작 검증\n   - 여러 PDF 파일 업로드 시 성능 및 안정성 확인\n\n3. 문서화 검증:\n   - 수집된 스크린샷과 로그가 README에 적절히 반영되었는지 확인\n   - 트러블슈팅 가이드가 실제 발생 가능한 문제들을 다루는지 검증\n   - 실행 가이드의 명확성 및 완성도 확인\n\n4. 완료 조건 확인:\n   - 모든 체크리스트 항목 통과\n   - 문제점 및 개선사항 이슈화 완료\n   - README 업데이트 완료 및 실제 동작 스크린샷 포함 확인",
+        "status": "pending",
+        "dependencies": [
+          10
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "환경 검증 체크리스트",
+            "description": "필수 환경 변수와 가상환경/의존성 설치 상태를 점검합니다.",
+            "details": "- .env 필수 값 확인: AOAI_ENDPOINT, AOAI_API_KEY, AOAI_DEPLOY_GPT4O, AOAI_DEPLOY_EMBED_3_LARGE\n- uv venv 생성/활성화 확인\n- uv pip install -r requirements.txt 설치 완료 확인\n- 수용 기준: 누락/오타 시 사용자 가이딩 메시지 마련 및 수정 완료\n<info added on 2025-08-11T04:46:30.551Z>\n[환경 점검 결과]\n- .env: 프로젝트 루트에 없음 → 실행 전 생성 필요 (AOAI_ENDPOINT, AOAI_API_KEY, AOAI_DEPLOY_GPT4O, AOAI_DEPLOY_EMBED_3_LARGE)\n- data/: 존재하지 않아 생성 완료 (data/.gitkeep 추가)\n- requirements.txt 확인:\n  - 포함: streamlit, langchain, langgraph, langchain-core, langchain-community, langchain-text-splitters, faiss-cpu, ddgs, python-dotenv\n  - 이슈: 앱은 `from langchain_azure_openai import AzureChatOpenAI, AzureOpenAIEmbeddings` 를 사용하나, 요구사항에 `langchain-azure-openai` 패키지가 누락되어 ImportError 가능\n    - 대응 옵션 A: requirements.txt에 `langchain-azure-openai` 추가 후 재설치\n    - 대응 옵션 B: 코드에서 `langchain_openai`(langchain-openai)로 전환하여 Azure 파라미터 기반 설정\n- 기타: ddgs, faiss-cpu, langchain-text-splitters 설치 대상 확인\n\n[결론]\n- 환경 기본 골격 준비 완료(data/ 디렉토리 생성)\n- 실행(11.2) 전 .env 값 채우기 및 의존성 점검 필요\n</info added on 2025-08-11T04:46:30.551Z>",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 11
+          },
+          {
+            "id": 2,
+            "title": "앱 실행 및 초기 로딩 확인",
+            "description": "Streamlit 앱을 기동하여 초기 로딩 오류 유무를 점검합니다.",
+            "details": "- uv run streamlit run app.py 또는 streamlit run app.py 실행\n- 초기 로딩 스피너/에러 메시지 확인\n- 수용 기준: 실행 시 오류 없음, 초기 화면 정상 표시\n<info added on 2025-08-11T04:46:36.019Z>\n[실행 준비 상태]\n- 예상 실행 명령: `uv run streamlit run app.py` 또는 `streamlit run app.py`\n\n[차단 요소]\n1) .env 미구성 → AOAI_ENDPOINT, AOAI_API_KEY, AOAI_DEPLOY_GPT4O, AOAI_DEPLOY_EMBED_3_LARGE 필요\n2) `langchain_azure_openai` 임포트 사용 대비 `langchain-azure-openai` 패키지 미설치 시 ImportError 가능\n   - 해결책 A: requirements.txt에 `langchain-azure-openai` 추가 후 재설치\n   - 해결책 B: 코드에서 `langchain_openai`(langchain-openai)로 전환하여 Azure 매개변수를 사용\n\n[다음 조치 체크리스트]\n- `.env` 생성 및 값 적용 (예: cp .env.example .env 후 값 채우기)\n- `uv pip install -r requirements.txt` 재실행\n- 위 완료 시 앱 실행 및 초기 로딩 검증 진행 예정\n</info added on 2025-08-11T04:46:36.019Z>\n<info added on 2025-08-11T04:48:41.644Z>\n[의존성 정비 완료]\n- requirements.txt에서 `langchain-azure-openai` 패키지 제거 완료\n- app.py 코드에서 `from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings`로 임포트 전환 완료\n- Azure 파라미터(azure_endpoint, api_key, api_version, azure_deployment) 명시적 전달 방식으로 통합 완료\n- `uv pip install --upgrade -r requirements.txt` 정상 실행 완료\n\n[현재 실행 준비 상태]\n- 의존성 충돌 해결됨\n- 남은 전제 조건: .env 파일 내 Azure OpenAI 환경 변수 설정 필요 (AOAI_ENDPOINT, AOAI_API_KEY, AOAI_DEPLOY_GPT4O, AOAI_DEPLOY_EMBED_3_LARGE)\n- 환경 변수 설정 완료 시 즉시 앱 실행 및 초기 로딩 검증 진행 가능\n</info added on 2025-08-11T04:48:41.644Z>\n<info added on 2025-08-11T05:07:12.343Z>\n[실행 검증 완료]\n- Streamlit 앱 정상 기동 확인\n- 콘솔 출력: Local URL http://localhost:8501 (또는 8502), Network URL 표시\n- 초기 로딩 시 오류/예외 발생 없음\n- 프롬프트/에이전트 구성 수정 사항 정상 반영됨\n- 수용 기준 충족: 실행 오류 없음, 초기 화면 정상 표시\n\n[작업 완료]\n- 앱 실행 및 초기 로딩 확인 단계 성공적으로 완료\n- 다음 단계(11.3 파일 업로드 및 RAG 재빌드 확인)로 진행 준비 완료\n</info added on 2025-08-11T05:07:12.343Z>",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 11
+          },
+          {
+            "id": 3,
+            "title": "파일 업로드 및 RAG 재빌드 확인",
+            "description": "PDF 업로드에 따라 RAG 파이프라인이 재생성되는지 확인합니다.",
+            "details": "- data/ 폴더 비어 있을 때 안내 메시지 확인\n- PDF 1~2개 업로드 → st.cache_resource.clear() 및 st.rerun 동작 확인\n- 사이드바에 업로드 파일명 노출 확인\n- 수용 기준: 업로드 후 검색 품질 향상/에러 없음\n<info added on 2025-08-11T05:07:17.466Z>\n[진행 계획]\n- data/ 폴더 비어 있을 때: 사이드바에 \"업로드된 파일이 없습니다. 기본 데이터로 분석합니다.\" 안내 확인\n- PDF 1~2개 업로드 → 업로드 성공 메시지 출력 및 st.cache_resource.clear(), st.rerun 동작 확인\n- 업로드 후 사이드바에 파일명 표기 확인\n- 업로드 완료 후 질문 입력 시 RAG 검색 품질 개선 여부(문서 기반 맥락 포함) 확인\n\n[사용자 실행 가이드]\n1) Streamlit 사이드바에서 PDF 선택 후 업로드\n2) 업로드 완료 메시지 확인 → 페이지 자동 재실행\n3) 좌측 사이드바에 업로드한 파일명이 보이는지 확인\n4) 예시 질문 입력 후 결과에 문서 기반 내용이 반영되는지 검토\n\n[수용 기준]\n- 업로드 후 오류 없이 RAG 재빌드 동작\n- 사이드바 파일명 노출 및 검색 품질 향상 확인\n</info added on 2025-08-11T05:07:17.466Z>\n<info added on 2025-08-11T05:11:04.077Z>\n[무한 재실행 이슈 해결 완료]\n- 원인 분석: 업로드 완료 직후 st.rerun 호출 시, 동일한 file_uploader 위젯 인스턴스가 이전 상태를 유지하여 매 렌더마다 업로드 이벤트가 재감지되어 무한 재실행 발생\n- 해결 방안: file_uploader에 동적 key 적용(`key=f\"uploader_{st.session_state.uploader_key}\"`) 및 업로드 처리 후 `st.session_state.uploader_key += 1`로 키 변경하여 다음 렌더에서 위젯 상태 초기화\n- 기술적 조치: 캐시 초기화(st.cache_resource.clear())는 유지하되, 업로드 상태를 재사용하지 않도록 키 변경을 우선 적용\n\n[수정된 검증 방법]\n- PDF 업로드 → 성공 메시지 이후 한 번만 재실행되는지 확인 (무한 루프 방지)\n- 사이드바 파일명 정상 노출 확인\n- 이후 추가 업로드 시에도 동일하게 1회 재실행만 발생하는지 재검증\n- 위젯 키 변경으로 인한 업로드 기능 정상 동작 확인\n</info added on 2025-08-11T05:11:04.077Z>",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 11
+          },
+          {
+            "id": 4,
+            "title": "질의 처리 및 멀티 에이전트 라우팅 검증",
+            "description": "질문 입력 후 Supervisor/Researcher/Analyst 단계가 정상적으로 동작하는지 확인합니다.",
+            "details": "- 예시 질문 입력 → st.status 단계별 레이블 갱신 확인\n- researcher 도구 호출(bok_document_search, web_search) 정상 동작\n- analyst 결과 생성 및 Supervisor 최종 응답(Final Answer) 수신\n- 수용 기준: 최종 응답이 사용자 채팅에 표시\n<info added on 2025-08-11T05:12:03.901Z>\n[진행 체크리스트]\n1) 예시 질문 입력: \"최근 기준금리 동결의 영향 분석\" 등\n2) 상태 표시(st.status) 단계 확인: Supervisor → Researcher → Analyst 순으로 레이블 변경\n3) Researcher 도구 호출 확인: bok_document_search(업로드 PDF 기반), web_search(ddgs)\n4) 오류 발생 시: error 메시지 수신 → Supervisor가 재할당/종료 판단하는지 확인\n5) 최종 응답: Supervisor 메시지에서 \"Final Answer:\" 이후 내용이 사용자 채팅에 표시되는지 확인\n\n[수용 기준]\n- 각 단계 레이블 정상 업데이트\n- 최소 한 번 이상 Researcher/Analyst 실행 흔적 확인\n- 최종 답변 렌더링 확인(빈 문자열 아님)\n</info added on 2025-08-11T05:12:03.901Z>\n<info added on 2025-08-11T06:52:55.731Z>\n[진행 업데이트 - 최종 응답 수집 로직 보완]\n\n**문제 해결 진행 상황:**\n- 400 에러 해결: Supervisor를 tool_calls 없는 라우팅 전용으로 전환 완료\n- 그래프 분기 개선: Analyst 노드를 END로 직접 연결하여 워크플로우 안정화\n- 새로운 이슈 발견: UI에서 최종 응답이 비어 있음 (길이=0)\n\n**원인 분석:**\n- 현재 스트리밍 로직이 supervisor 메시지에서만 최종 답변 수집\n- Analyst가 바로 END로 종료되어 supervisor의 비툴 메시지가 없으면 final_response가 공백\n\n**해결 방안 (우선순위별):**\n1) 스트리밍 루프에 analyst 노드 메시지 수집 분기 추가\n   - 조건: if \"analyst\" in chunk and chunk[\"analyst\"].get(\"messages\")\n   - 동작: final_response = chunk[\"analyst\"][\"messages\"][-1].content\n2) Supervisor 프롬프트 규칙 강화로 'Final Answer:' 형식 보장\n\n**현재 상태:** 기능 동작은 확인되었으나 UI 최종 응답 표시 로직 보완 필요\n</info added on 2025-08-11T06:52:55.731Z>",
+            "status": "in-progress",
+            "dependencies": [],
+            "parentTaskId": 11
+          },
+          {
+            "id": 5,
+            "title": "예외/에러 처리 시나리오 검증",
+            "description": "주요 실패 케이스에서 사용자 친화적 메시지와 복구 동작을 확인합니다.",
+            "details": "- 환경 변수 누락/오류 → 가독성 있는 에러 안내\n- ddgs 검색 실패/네트워크 예외 → 안내 메시지 및 재시도 흐름\n- API rate limit/timeout 가정 → 메시지 처리 확인\n- 수용 기준: 앱 크래시 없이 안내/복구",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 11
+          },
+          {
+            "id": 6,
+            "title": "산출물 정리 및 README 반영",
+            "description": "검증 로그/스크린샷을 정리하고 README에 반영합니다.",
+            "details": "- 업로드/상태 변화/최종 응답 스크린샷 수집\n- README 실행 가이드/트러블슈팅 섹션 업데이트\n- 수용 기준: 문서 변경이 리포지토리에 반영",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 11
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "안정성/성능/로깅 개선 리팩터링",
+        "description": "RAG 캐시 정확도 강화, 파이프라인 시그니처 간소화, 툴 호출 인자 파싱 강건성 향상, 불필요 임포트 정리, 로깅 레벨 토글 추가를 통한 전체 시스템 안정성 및 성능 개선",
+        "details": "1. 캐시 키 정확도 강화 (rag_pipeline.py):\n```python\nimport os\nfrom pathlib import Path\n\ndef generate_cache_key(pdf_files):\n    \"\"\"PDF 파일명 + mtime을 포함한 정확한 캐시 키 생성\"\"\"\n    cache_parts = []\n    for file_path in sorted(pdf_files):\n        if os.path.exists(file_path):\n            mtime = os.path.getmtime(file_path)\n            filename = Path(file_path).name\n            cache_parts.append(f\"{filename}_{int(mtime)}\")\n    return \"_\".join(cache_parts)\n\ndef build_rag_pipeline(cache_key=None):\n    \"\"\"시그니처 간소화: cache_key만 받아 내부에서 모델/임베딩/리트리버 생성\"\"\"\n    if not cache_key:\n        # data/ 폴더에서 PDF 파일 스캔하여 자동 생성\n        pdf_files = list(Path(\"data\").glob(\"*.pdf\"))\n        cache_key = generate_cache_key(pdf_files)\n    \n    # 내부에서 모든 컴포넌트 생성\n    model = get_azure_openai_model()\n    embeddings = get_azure_openai_embeddings()\n    # ... 리트리버 생성 로직\n```\n\n2. Tool 호출 인자 파싱 강건성 향상 (agents.py):\n```python\ndef safe_extract_query(args):\n    \"\"\"안전한 쿼리 추출: args.input→args.query→첫 값 순으로 시도\"\"\"\n    try:\n        # 첫 번째 시도: args.input\n        if hasattr(args, 'input') and args.input:\n            return args.input\n        # 두 번째 시도: args.query  \n        if hasattr(args, 'query') and args.query:\n            return args.query\n        # 세 번째 시도: 첫 번째 속성 값\n        if hasattr(args, '__dict__'):\n            for key, value in args.__dict__.items():\n                if value and isinstance(value, str):\n                    return value\n        return \"질문을 파싱할 수 없습니다\"\n    except Exception as e:\n        logging.warning(f\"인자 파싱 실패: {e}\")\n        return \"질문을 파싱할 수 없습니다\"\n```\n\n3. 불필요 임포트 정리:\n- BaseMessage, unused typing imports 제거\n- 실제 사용되는 임포트만 유지\n- import 순서 정리 (표준 라이브러리 → 서드파티 → 로컬)\n\n4. 로깅 레벨 토글 추가:\n```python\nimport logging\nimport os\n\n# .env에서 LOG_LEVEL 읽기 (기본값: INFO)\nlog_level = os.getenv('LOG_LEVEL', 'INFO').upper()\nlogging.basicConfig(\n    level=getattr(logging, log_level, logging.INFO),\n    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'\n)\n\nlogger = logging.getLogger(__name__)\n```\n\n5. 문서화 업데이트 (README.md):\n- 로깅 설정 방법 (.env의 LOG_LEVEL 변수)\n- 캐시 동작 원리 (파일명 + mtime 기반)\n- 시스템 재구성 후 주요 변경사항 설명",
+        "testStrategy": "1. 캐시 키 정확도 검증:\n   - 동일 파일 여러 번 업로드 시 동일 캐시 키 생성 확인\n   - 파일 수정 후 다른 캐시 키 생성 확인\n   - 파일명 변경 시 다른 캐시 키 생성 확인\n\n2. 파이프라인 시그니처 검증:\n   - build_rag_pipeline() 인자 없이 호출 성공 확인\n   - build_rag_pipeline(cache_key) 명시적 호출 성공 확인\n   - 내부에서 모든 컴포넌트 정상 생성 확인\n\n3. Tool 인자 파싱 강건성 테스트:\n   - 정상적인 args.input 케이스 테스트\n   - args.query만 있는 케이스 테스트\n   - 비정상적인 인자 구조에서 안전한 fallback 확인\n   - 예외 발생 시 기본값 반환 확인\n\n4. 로깅 레벨 토글 테스트:\n   - LOG_LEVEL=DEBUG 설정 후 디버그 메시지 출력 확인\n   - LOG_LEVEL=INFO 설정 후 정보 메시지만 출력 확인\n   - LOG_LEVEL 미설정 시 기본 INFO 레벨 동작 확인\n\n5. 전체 시스템 안정성 검증:\n   - 리팩터링 후 기존 기능 정상 동작 확인\n   - 성능 개선 효과 측정 (캐시 히트율, 응답 시간)\n   - 에러 로그 감소 및 로그 가독성 향상 확인",
+        "status": "pending",
+        "dependencies": [
+          10
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "캐시 키(mtime 포함) 및 시그니처 간소화",
+            "description": "RAG 캐시 정확도를 높이고 호출 시그니처를 단순화합니다.",
+            "details": "- cache_key에 파일명+mtime 포함\n- build_rag_pipeline(cache_key: str) 형태로 단순화\n- 호출부에서 모델/임베딩 생성 제거, 함수 내부로 이동",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 12
+          },
+          {
+            "id": 2,
+            "title": "툴 호출 인자 파싱 강화",
+            "description": "tool_calls.args의 다양한 키(input/query/__arg1 등) 대응",
+            "details": "- 우선순위: input > query > 첫 값\n- None/비문자 처리 방어코드",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 12
+          },
+          {
+            "id": 3,
+            "title": "불필요 임포트 정리",
+            "description": "미사용 임포트 제거로 코드 경량화",
+            "details": "- BaseMessage 등 미사용 항목 제거\n- isort/black 스타일 유지",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 12
+          },
+          {
+            "id": 4,
+            "title": "로깅 레벨 토글 추가",
+            "description": ".env LOG_LEVEL로 INFO/DEBUG 제어",
+            "details": "- LOG_LEVEL=DEBUG 시 상세 로그 출력\n- 기본값 INFO\n- logger.setLevel 적용",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 12
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "운영 안정화 및 품질 개선 리팩터링",
+        "description": "시스템의 운영 안정성과 품질을 향상시키기 위해 라우팅 엄격화, 루프 차단, 결과 신뢰성 강화, RAG 최적화, UI 개선, 로깅 강화 및 문서화를 포함한 종합적인 리팩터링을 수행합니다.",
+        "details": "1. Supervisor 라우팅 엄격화 (agents.py):\n```python\nclass RouteResponse(BaseModel):\n    next: Literal[\"researcher\", \"analyst\", \"ROUTE\", \"Final Answer\", \"END\"] = Field(\n        description=\"다음에 호출할 에이전트 선택 - 불명확시 END 반환\"\n    )\n\ndef supervisor_node(state: AgentState):\n    # 불명확한 상황에서 END로 라우팅하는 로직 강화\n    if len(state[\"messages\"]) > MAX_ITERATIONS:\n        return {\"next\": \"END\"}\n```\n\n2. 루프 차단 및 재귀 한도 설정 (graph.py):\n```python\nMAX_ITERATIONS = 10\nTIMEOUT_SECONDS = 300\nRETRY_COUNT = 3\n\ndef create_graph_with_limits(retriever=None):\n    workflow = StateGraph(AgentState)\n    # 타임아웃 및 재시도 로직 추가\n    workflow.add_conditional_edges(\n        \"supervisor\",\n        lambda x: check_iteration_limit(x),\n        {\"continue\": \"researcher\", \"end\": END}\n    )\n```\n\n3. 결과 신뢰성 강화 (agents.py):\n```python\nCITATION_FORMAT = \"\"\"\n출처: [{source_name}] {page_info}\n근거: {evidence_text}\n신뢰도: {confidence_score}\n\"\"\"\n\ndef format_response_with_citations(content, sources):\n    # 고정 포맷으로 출처 및 인용 정보 포함\n    # 근거 부족 시 재조회 로직 구현\n```\n\n4. RAG 인덱스 영속화 및 검색 튜닝 (rag_pipeline.py):\n```python\nimport faiss\nfrom langchain.retrievers import ContextualCompressionRetriever\nfrom langchain.retrievers.document_compressors import LLMChainExtractor\n\ndef save_faiss_index(vectorstore, index_path):\n    vectorstore.save_local(index_path)\n\ndef load_faiss_index(index_path):\n    return FAISS.load_local(index_path)\n\ndef create_mmr_retriever(vectorstore, k=5, fetch_k=20):\n    return vectorstore.as_retriever(\n        search_type=\"mmr\",\n        search_kwargs={\"k\": k, \"fetch_k\": fetch_k}\n    )\n\ndef create_compressed_retriever(base_retriever):\n    compressor = LLMChainExtractor.from_llm(llm)\n    return ContextualCompressionRetriever(\n        base_compressor=compressor,\n        base_retriever=base_retriever\n    )\n```\n\n5. UI 개선 (app.py):\n```python\n# 웹 검색 토글\nweb_search_enabled = st.sidebar.toggle(\"웹 검색 활성화\", value=True)\n\n# 근거 미리보기\nwith st.expander(\"📋 근거 미리보기\"):\n    st.write(preview_sources)\n\n# 대화 관리\ncol1, col2 = st.columns(2)\nwith col1:\n    if st.button(\"🔄 대화 초기화\"):\n        st.session_state.messages = []\n        st.rerun()\nwith col2:\n    if st.button(\"📤 대화 내보내기\"):\n        export_conversation()\n```\n\n6. 운영 로깅 강화 (logging_config.py):\n```python\nimport logging\nimport json\nfrom logging.handlers import RotatingFileHandler\n\ndef setup_operational_logging():\n    logger = logging.getLogger(\"economic_analysis\")\n    \n    # JSON 라인 포맷터\n    class JSONLineFormatter(logging.Formatter):\n        def format(self, record):\n            log_entry = {\n                \"timestamp\": self.formatTime(record),\n                \"level\": record.levelname,\n                \"message\": record.getMessage(),\n                \"module\": record.module\n            }\n            return json.dumps(log_entry, ensure_ascii=False)\n    \n    # 파일 핸들러 설정\n    file_handler = RotatingFileHandler(\n        \"logs/app.log\", maxBytes=10*1024*1024, backupCount=5\n    )\n    file_handler.setFormatter(JSONLineFormatter())\n    logger.addHandler(file_handler)\n\n# DDGS 재시도/폴백 로직\ndef search_with_fallback(query, max_retries=3):\n    for attempt in range(max_retries):\n        try:\n            return ddgs_search(query)\n        except Exception as e:\n            logger.warning(f\"DDGS 검색 실패 (시도 {attempt+1}): {e}\")\n            if attempt == max_retries - 1:\n                return fallback_search(query)\n```\n\n7. 문서화 및 테스트 추가:\n- .env.example 파일 생성\n- README.md 업데이트 (설치, 설정, 사용법)\n- PRD (Product Requirements Document) 작성\n- E2E 스모크 테스트 스크립트 구현",
+        "testStrategy": "1. 라우팅 검증 스모크 테스트:\n   - 동일한 질문을 5회 반복하여 일관된 라우팅 경로 확인\n   - 불명확한 질문에 대해 END로 적절히 라우팅되는지 검증\n   - 최대 반복 횟수 도달 시 자동 종료 확인\n\n2. 루프 차단 및 한도 테스트:\n   - 의도적으로 무한 루프를 유발하는 시나리오 테스트\n   - 타임아웃 설정이 정상 작동하는지 확인\n   - 재시도 로직이 설정된 횟수만큼 동작하는지 검증\n\n3. 결과 신뢰성 검증:\n   - 출처 정보가 고정 포맷으로 일관되게 표시되는지 확인\n   - 근거 부족 시 재조회가 트리거되는지 테스트\n   - 신뢰도 점수가 적절히 계산되고 표시되는지 검증\n\n4. RAG 성능 테스트:\n   - FAISS 인덱스 저장/로드 기능 정상 동작 확인\n   - MMR 검색과 기존 유사도 검색 결과 비교\n   - 컨텍스트 압축 전후 응답 품질 비교\n\n5. UI 기능 테스트:\n   - 웹 검색 토글 on/off 시 동작 차이 확인\n   - 근거 미리보기 정보 정확성 검증\n   - 대화 초기화/내보내기 기능 정상 동작 확인\n\n6. 로깅 및 모니터링 검증:\n   - JSON 라인 로그 포맷 정확성 확인\n   - 파일 로테이션 정상 동작 테스트\n   - DDGS 재시도/폴백 시나리오별 로그 기록 확인\n\n7. 종합 스모크 테스트:\n   - 동일 질문 반복 시나리오로 라우팅, 결과, 출처의 일관성 검증\n   - 다양한 경제 질문으로 전체 시스템 안정성 확인\n   - 문서화된 설치/실행 가이드 검증",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Supervisor 라우팅 엄격화 및 종료 가드",
+            "description": "ROUTE/Final Answer 외 출력 금지. 불명확 응답 기본 END. 시스템 프롬프트 강화 및 route_action 기본값 보수화.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 13
+          },
+          {
+            "id": 2,
+            "title": "루프 차단/재귀한도·타임아웃·재시도 설정",
+            "description": "AzureChatOpenAI max_retries, timeout 설정. Graph recursion_limit 보수적 상향. 무한 루프 방지.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 13
+          },
+          {
+            "id": 3,
+            "title": "RAG 인덱스 영속화 및 검색 튜닝",
+            "description": "FAISS save/load로 영속화. as_retriever(search_type=\"mmr\", k/fetch_k 조정). ContextualCompressionRetriever 검토.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 13
+          },
+          {
+            "id": 4,
+            "title": "결과 신뢰성: 출처/인용 강제 및 재조회",
+            "description": "Researcher 출력에 출처(문서/페이지/URL) 포맷 강제. 근거 부족 시 k↑ 재조회. Analyst 인용 포함.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 13
+          },
+          {
+            "id": 5,
+            "title": "UI/UX: 웹검색 토글·근거 미리보기·대화 관리",
+            "description": "사이드바 토글로 ddgs on/off. 상위 스니펫 3개 근거 미리보기. 대화 초기화/결과 내보내기 버튼.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 13
+          },
+          {
+            "id": 6,
+            "title": "운영/장애대응 및 문서/테스트",
+            "description": "파일 로깅(JSONL), DDGS 재시도/폴백. .env.example/README/PRD 업데이트. E2E 스모크 테스트 추가.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 13
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T04:36:34.710Z",
+      "updated": "2025-08-11T07:11:42.739Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

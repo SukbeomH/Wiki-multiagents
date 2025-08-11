@@ -1,0 +1,55 @@
+# Task ID: 5
+# Title: Researcher 에이전트 구현
+# Status: done
+# Dependencies: 3, 4
+# Priority: medium
+# Description: 정보 수집을 담당하는 Researcher 에이전트를 구현하여 RAG 시스템과 웹 검색을 통해 데이터를 수집합니다.
+# Details:
+1. agents.py에 Researcher 에이전트 추가:
+```python
+from langchain_core.messages import HumanMessage, SystemMessage
+
+RESEARCHER_PROMPT = """
+당신은 경제 분석을 위한 전문 연구원입니다.
+사용자의 질문에 대해 다음 소스에서 관련 정보를 수집하세요:
+1. 업로드된 PDF 문서 (RAG 시스템)
+2. 최신 웹 뉴스 및 정보
+
+수집한 정보는 신뢰할 수 있는 출처를 기반으로 하며,
+구체적인 데이터와 사실을 중심으로 정리해주세요.
+"""
+
+def researcher_node(state: AgentState, retriever=None):
+    messages = state['messages']
+    last_message = messages[-1].content
+    
+    # RAG 검색
+    context = ""
+    if retriever:
+        docs = retriever.get_relevant_documents(last_message)
+        context = "\n".join([doc.page_content for doc in docs])
+    
+    # 웹 검색
+    web_results = web_search_tool(last_message)
+    
+    # 연구 결과 생성
+    research_prompt = f"""
+    {RESEARCHER_PROMPT}
+    
+    질문: {last_message}
+    
+    PDF 문서 정보:
+    {context}
+    
+    웹 검색 결과:
+    {web_results}
+    
+    위 정보를 바탕으로 질문과 관련된 핵심 정보를 정리해주세요.
+    """
+    
+    response = llm.invoke([SystemMessage(content=research_prompt)])
+    return {"messages": [response], "next": "analyst"}
+```
+
+# Test Strategy:
+샘플 경제 질문으로 RAG 검색 및 웹 검색 결과 통합 테스트, 출력 형식 검증

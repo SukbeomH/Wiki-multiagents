@@ -17,3 +17,6 @@ ddgs
 
 # Utility for environment variable management
 python-dotenv
+
+# PDF processing
+pymupdf

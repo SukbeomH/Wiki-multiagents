@@ -1,0 +1,57 @@
+# Task ID: 9
+# Title: Streamlit UI 기본 구조 구현
+# Status: done
+# Dependencies: 8
+# Priority: high
+# Description: 채팅 인터페이스, 파일 업로드, 사이드바를 포함한 Streamlit 기본 UI를 구현합니다.
+# Details:
+1. app.py 파일 생성:
+```python
+import streamlit as st
+import os
+from rag_pipeline import build_rag_pipeline
+from graph import create_graph
+from langchain_core.messages import HumanMessage
+
+st.set_page_config(
+    page_title="지능형 경제 분석 시스템",
+    page_icon="📊",
+    layout="wide"
+)
+
+st.title("📊 지능형 경제 분석 시스템")
+st.markdown("경제 전문가를 위한 AI 기반 분석 도구")
+
+# 사이드바 - 파일 업로드
+with st.sidebar:
+    st.header("📁 문서 업로드")
+    uploaded_files = st.file_uploader(
+        "분석에 사용할 PDF 파일을 업로드하세요",
+        type=['pdf'],
+        accept_multiple_files=True
+    )
+    
+    if uploaded_files:
+        for uploaded_file in uploaded_files:
+            file_path = os.path.join("data", uploaded_file.name)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+        st.success(f"{len(uploaded_files)}개 파일이 업로드되었습니다.")
+        st.rerun()
+
+# 메인 채팅 인터페이스
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+if prompt := st.chat_input("경제 관련 질문을 입력하세요..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+```
+
+# Test Strategy:
+Streamlit 앱 실행 확인, 파일 업로드 기능 테스트, 채팅 UI 동작 확인

@@ -1,0 +1,212 @@
+# Task ID: 13
+# Title: 운영 안정화 및 품질 개선 리팩터링
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: 시스템의 운영 안정성과 품질을 향상시키기 위해 라우팅 엄격화, 루프 차단, 결과 신뢰성 강화, RAG 최적화, UI 개선, 로깅 강화 및 문서화를 포함한 종합적인 리팩터링을 수행합니다.
+# Details:
+1. Supervisor 라우팅 엄격화 (agents.py):
+```python
+class RouteResponse(BaseModel):
+    next: Literal["researcher", "analyst", "ROUTE", "Final Answer", "END"] = Field(
+        description="다음에 호출할 에이전트 선택 - 불명확시 END 반환"
+    )
+
+def supervisor_node(state: AgentState):
+    # 불명확한 상황에서 END로 라우팅하는 로직 강화
+    if len(state["messages"]) > MAX_ITERATIONS:
+        return {"next": "END"}
+```
+
+2. 루프 차단 및 재귀 한도 설정 (graph.py):
+```python
+MAX_ITERATIONS = 10
+TIMEOUT_SECONDS = 300
+RETRY_COUNT = 3
+
+def create_graph_with_limits(retriever=None):
+    workflow = StateGraph(AgentState)
+    # 타임아웃 및 재시도 로직 추가
+    workflow.add_conditional_edges(
+        "supervisor",
+        lambda x: check_iteration_limit(x),
+        {"continue": "researcher", "end": END}
+    )
+```
+
+3. 결과 신뢰성 강화 (agents.py):
+```python
+CITATION_FORMAT = """
+출처: [{source_name}] {page_info}
+근거: {evidence_text}
+신뢰도: {confidence_score}
+"""
+
+def format_response_with_citations(content, sources):
+    # 고정 포맷으로 출처 및 인용 정보 포함
+    # 근거 부족 시 재조회 로직 구현
+```
+
+4. RAG 인덱스 영속화 및 검색 튜닝 (rag_pipeline.py):
+```python
+import faiss
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import LLMChainExtractor
+
+def save_faiss_index(vectorstore, index_path):
+    vectorstore.save_local(index_path)
+
+def load_faiss_index(index_path):
+    return FAISS.load_local(index_path)
+
+def create_mmr_retriever(vectorstore, k=5, fetch_k=20):
+    return vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": k, "fetch_k": fetch_k}
+    )
+
+def create_compressed_retriever(base_retriever):
+    compressor = LLMChainExtractor.from_llm(llm)
+    return ContextualCompressionRetriever(
+        base_compressor=compressor,
+        base_retriever=base_retriever
+    )
+```
+
+5. UI 개선 (app.py):
+```python
+# 웹 검색 토글
+web_search_enabled = st.sidebar.toggle("웹 검색 활성화", value=True)
+
+# 근거 미리보기
+with st.expander("📋 근거 미리보기"):
+    st.write(preview_sources)
+
+# 대화 관리
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("🔄 대화 초기화"):
+        st.session_state.messages = []
+        st.rerun()
+with col2:
+    if st.button("📤 대화 내보내기"):
+        export_conversation()
+```
+
+6. 운영 로깅 강화 (logging_config.py):
+```python
+import logging
+import json
+from logging.handlers import RotatingFileHandler
+
+def setup_operational_logging():
+    logger = logging.getLogger("economic_analysis")
+    
+    # JSON 라인 포맷터
+    class JSONLineFormatter(logging.Formatter):
+        def format(self, record):
+            log_entry = {
+                "timestamp": self.formatTime(record),
+                "level": record.levelname,
+                "message": record.getMessage(),
+                "module": record.module
+            }
+            return json.dumps(log_entry, ensure_ascii=False)
+    
+    # 파일 핸들러 설정
+    file_handler = RotatingFileHandler(
+        "logs/app.log", maxBytes=10*1024*1024, backupCount=5
+    )
+    file_handler.setFormatter(JSONLineFormatter())
+    logger.addHandler(file_handler)
+
+# DDGS 재시도/폴백 로직
+def search_with_fallback(query, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            return ddgs_search(query)
+        except Exception as e:
+            logger.warning(f"DDGS 검색 실패 (시도 {attempt+1}): {e}")
+            if attempt == max_retries - 1:
+                return fallback_search(query)
+```
+
+7. 문서화 및 테스트 추가:
+- .env.example 파일 생성
+- README.md 업데이트 (설치, 설정, 사용법)
+- PRD (Product Requirements Document) 작성
+- E2E 스모크 테스트 스크립트 구현
+
+# Test Strategy:
+1. 라우팅 검증 스모크 테스트:
+   - 동일한 질문을 5회 반복하여 일관된 라우팅 경로 확인
+   - 불명확한 질문에 대해 END로 적절히 라우팅되는지 검증
+   - 최대 반복 횟수 도달 시 자동 종료 확인
+
+2. 루프 차단 및 한도 테스트:
+   - 의도적으로 무한 루프를 유발하는 시나리오 테스트
+   - 타임아웃 설정이 정상 작동하는지 확인
+   - 재시도 로직이 설정된 횟수만큼 동작하는지 검증
+
+3. 결과 신뢰성 검증:
+   - 출처 정보가 고정 포맷으로 일관되게 표시되는지 확인
+   - 근거 부족 시 재조회가 트리거되는지 테스트
+   - 신뢰도 점수가 적절히 계산되고 표시되는지 검증
+
+4. RAG 성능 테스트:
+   - FAISS 인덱스 저장/로드 기능 정상 동작 확인
+   - MMR 검색과 기존 유사도 검색 결과 비교
+   - 컨텍스트 압축 전후 응답 품질 비교
+
+5. UI 기능 테스트:
+   - 웹 검색 토글 on/off 시 동작 차이 확인
+   - 근거 미리보기 정보 정확성 검증
+   - 대화 초기화/내보내기 기능 정상 동작 확인
+
+6. 로깅 및 모니터링 검증:
+   - JSON 라인 로그 포맷 정확성 확인
+   - 파일 로테이션 정상 동작 테스트
+   - DDGS 재시도/폴백 시나리오별 로그 기록 확인
+
+7. 종합 스모크 테스트:
+   - 동일 질문 반복 시나리오로 라우팅, 결과, 출처의 일관성 검증
+   - 다양한 경제 질문으로 전체 시스템 안정성 확인
+   - 문서화된 설치/실행 가이드 검증
+
+# Subtasks:
+## 1. Supervisor 라우팅 엄격화 및 종료 가드 [pending]
+### Dependencies: None
+### Description: ROUTE/Final Answer 외 출력 금지. 불명확 응답 기본 END. 시스템 프롬프트 강화 및 route_action 기본값 보수화.
+### Details:
+
+
+## 2. 루프 차단/재귀한도·타임아웃·재시도 설정 [pending]
+### Dependencies: None
+### Description: AzureChatOpenAI max_retries, timeout 설정. Graph recursion_limit 보수적 상향. 무한 루프 방지.
+### Details:
+
+
+## 3. RAG 인덱스 영속화 및 검색 튜닝 [pending]
+### Dependencies: None
+### Description: FAISS save/load로 영속화. as_retriever(search_type="mmr", k/fetch_k 조정). ContextualCompressionRetriever 검토.
+### Details:
+
+
+## 4. 결과 신뢰성: 출처/인용 강제 및 재조회 [pending]
+### Dependencies: None
+### Description: Researcher 출력에 출처(문서/페이지/URL) 포맷 강제. 근거 부족 시 k↑ 재조회. Analyst 인용 포함.
+### Details:
+
+
+## 5. UI/UX: 웹검색 토글·근거 미리보기·대화 관리 [pending]
+### Dependencies: None
+### Description: 사이드바 토글로 ddgs on/off. 상위 스니펫 3개 근거 미리보기. 대화 초기화/결과 내보내기 버튼.
+### Details:
+
+
+## 6. 운영/장애대응 및 문서/테스트 [pending]
+### Dependencies: None
+### Description: 파일 로깅(JSONL), DDGS 재시도/폴백. .env.example/README/PRD 업데이트. E2E 스모크 테스트 추가.
+### Details:
+
+

@@ -1,0 +1,140 @@
+# Task ID: 12
+# Title: 안정성/성능/로깅 개선 리팩터링
+# Status: pending
+# Dependencies: 10
+# Priority: medium
+# Description: RAG 캐시 정확도 강화, 파이프라인 시그니처 간소화, 툴 호출 인자 파싱 강건성 향상, 불필요 임포트 정리, 로깅 레벨 토글 추가를 통한 전체 시스템 안정성 및 성능 개선
+# Details:
+1. 캐시 키 정확도 강화 (rag_pipeline.py):
+```python
+import os
+from pathlib import Path
+
+def generate_cache_key(pdf_files):
+    """PDF 파일명 + mtime을 포함한 정확한 캐시 키 생성"""
+    cache_parts = []
+    for file_path in sorted(pdf_files):
+        if os.path.exists(file_path):
+            mtime = os.path.getmtime(file_path)
+            filename = Path(file_path).name
+            cache_parts.append(f"{filename}_{int(mtime)}")
+    return "_".join(cache_parts)
+
+def build_rag_pipeline(cache_key=None):
+    """시그니처 간소화: cache_key만 받아 내부에서 모델/임베딩/리트리버 생성"""
+    if not cache_key:
+        # data/ 폴더에서 PDF 파일 스캔하여 자동 생성
+        pdf_files = list(Path("data").glob("*.pdf"))
+        cache_key = generate_cache_key(pdf_files)
+    
+    # 내부에서 모든 컴포넌트 생성
+    model = get_azure_openai_model()
+    embeddings = get_azure_openai_embeddings()
+    # ... 리트리버 생성 로직
+```
+
+2. Tool 호출 인자 파싱 강건성 향상 (agents.py):
+```python
+def safe_extract_query(args):
+    """안전한 쿼리 추출: args.input→args.query→첫 값 순으로 시도"""
+    try:
+        # 첫 번째 시도: args.input
+        if hasattr(args, 'input') and args.input:
+            return args.input
+        # 두 번째 시도: args.query  
+        if hasattr(args, 'query') and args.query:
+            return args.query
+        # 세 번째 시도: 첫 번째 속성 값
+        if hasattr(args, '__dict__'):
+            for key, value in args.__dict__.items():
+                if value and isinstance(value, str):
+                    return value
+        return "질문을 파싱할 수 없습니다"
+    except Exception as e:
+        logging.warning(f"인자 파싱 실패: {e}")
+        return "질문을 파싱할 수 없습니다"
+```
+
+3. 불필요 임포트 정리:
+- BaseMessage, unused typing imports 제거
+- 실제 사용되는 임포트만 유지
+- import 순서 정리 (표준 라이브러리 → 서드파티 → 로컬)
+
+4. 로깅 레벨 토글 추가:
+```python
+import logging
+import os
+
+# .env에서 LOG_LEVEL 읽기 (기본값: INFO)
+log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
+logging.basicConfig(
+    level=getattr(logging, log_level, logging.INFO),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+logger = logging.getLogger(__name__)
+```
+
+5. 문서화 업데이트 (README.md):
+- 로깅 설정 방법 (.env의 LOG_LEVEL 변수)
+- 캐시 동작 원리 (파일명 + mtime 기반)
+- 시스템 재구성 후 주요 변경사항 설명
+
+# Test Strategy:
+1. 캐시 키 정확도 검증:
+   - 동일 파일 여러 번 업로드 시 동일 캐시 키 생성 확인
+   - 파일 수정 후 다른 캐시 키 생성 확인
+   - 파일명 변경 시 다른 캐시 키 생성 확인
+
+2. 파이프라인 시그니처 검증:
+   - build_rag_pipeline() 인자 없이 호출 성공 확인
+   - build_rag_pipeline(cache_key) 명시적 호출 성공 확인
+   - 내부에서 모든 컴포넌트 정상 생성 확인
+
+3. Tool 인자 파싱 강건성 테스트:
+   - 정상적인 args.input 케이스 테스트
+   - args.query만 있는 케이스 테스트
+   - 비정상적인 인자 구조에서 안전한 fallback 확인
+   - 예외 발생 시 기본값 반환 확인
+
+4. 로깅 레벨 토글 테스트:
+   - LOG_LEVEL=DEBUG 설정 후 디버그 메시지 출력 확인
+   - LOG_LEVEL=INFO 설정 후 정보 메시지만 출력 확인
+   - LOG_LEVEL 미설정 시 기본 INFO 레벨 동작 확인
+
+5. 전체 시스템 안정성 검증:
+   - 리팩터링 후 기존 기능 정상 동작 확인
+   - 성능 개선 효과 측정 (캐시 히트율, 응답 시간)
+   - 에러 로그 감소 및 로그 가독성 향상 확인
+
+# Subtasks:
+## 1. 캐시 키(mtime 포함) 및 시그니처 간소화 [done]
+### Dependencies: None
+### Description: RAG 캐시 정확도를 높이고 호출 시그니처를 단순화합니다.
+### Details:
+- cache_key에 파일명+mtime 포함
+- build_rag_pipeline(cache_key: str) 형태로 단순화
+- 호출부에서 모델/임베딩 생성 제거, 함수 내부로 이동
+
+## 2. 툴 호출 인자 파싱 강화 [done]
+### Dependencies: None
+### Description: tool_calls.args의 다양한 키(input/query/__arg1 등) 대응
+### Details:
+- 우선순위: input > query > 첫 값
+- None/비문자 처리 방어코드
+
+## 3. 불필요 임포트 정리 [done]
+### Dependencies: None
+### Description: 미사용 임포트 제거로 코드 경량화
+### Details:
+- BaseMessage 등 미사용 항목 제거
+- isort/black 스타일 유지
+
+## 4. 로깅 레벨 토글 추가 [done]
+### Dependencies: None
+### Description: .env LOG_LEVEL로 INFO/DEBUG 제어
+### Details:
+- LOG_LEVEL=DEBUG 시 상세 로그 출력
+- 기본값 INFO
+- logger.setLevel 적용
+

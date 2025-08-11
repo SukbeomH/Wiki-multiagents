@@ -1,0 +1,232 @@
+# Task ID: 11
+# Title: 실제 동작 검증(E2E) 테스트 및 문서화
+# Status: pending
+# Dependencies: 10
+# Priority: high
+# Description: 통합된 시스템(app.py)이 실제 환경에서 문제 없이 동작함을 검증하고, 실행 로그와 스크린샷을 수집하여 README에 반영합니다.
+# Details:
+1. 환경 검증 단계:
+   - .env 파일 필수 변수 확인 (AOAI_ENDPOINT, AOAI_API_KEY, AOAI_DEPLOY_GPT4O, AOAI_DEPLOY_EMBED_3_LARGE)
+   - uv venv 생성 및 활성화 확인
+   - uv pip install -r requirements.txt 설치 완료 검증
+   - 환경 변수 누락 시 에러 메시지 가독성 확인
+
+2. 앱 실행 검증:
+   - uv run streamlit run app.py 또는 streamlit run app.py로 실행
+   - 초기 로딩 중 오류 없음 확인
+   - 페이지 제목 및 기본 UI 요소 정상 표시 확인
+
+3. 파일 업로드 및 RAG 기능 검증:
+   - data/ 폴더 비어있을 때 기본 데이터 경고/안내 표시 확인
+   - PDF 1~2개 업로드 후 캐시 초기화(st.cache_resource.clear()) 및 재실행(st.rerun) 동작 확인
+   - 업로드한 파일명이 사이드바에 정상 표시되는지 확인
+   - 벡터 인덱스 생성 및 RAG 파이프라인 구축 확인
+
+4. 질의 및 멀티 에이전트 라우팅 검증:
+   - 예시 질문 입력 시 st.status 단계별 표시 확인 (Supervisor/Researcher/Analyst)
+   - Researcher 도구 호출(bok_document_search, web_search) 정상 동작 확인
+   - ddgs 검색 실패/네트워크 예외 시 복구 동작 및 사용자 친화적 안내 확인
+   - Analyst 결과 생성 및 Supervisor 최종 응답(Final Answer) 수신 확인
+   - API rate limit/timeout 상황 시 메시지 처리 확인
+
+5. 예외 및 에러 처리 검증:
+   - 환경 변수 누락/잘못된 경우 에러 메시지 가독성 확인
+   - 네트워크 연결 실패 시 사용자 친화적 안내 확인
+   - 파일 업로드 실패 시 적절한 에러 처리 확인
+
+6. 산출물 생성:
+   - 각 단계별 실행 로그 수집 및 정리
+   - 주요 기능 동작 스크린샷 캡처 (업로드, 상태 변화, 최종 응답)
+   - README의 실행 가이드 및 트러블슈팅 섹션 업데이트
+   - 발견된 문제점 및 개선사항을 이슈화 또는 TODO로 반영
+
+# Test Strategy:
+1. 체크리스트 기반 검증:
+   - 환경 설정부터 최종 응답까지 전체 플로우 단계별 체크
+   - 각 검증 항목별 통과/실패 기록 및 스크린샷 수집
+   - 예외 상황 시나리오별 테스트 (환경 변수 누락, 네트워크 오류, 파일 업로드 실패 등)
+
+2. 실제 사용자 시나리오 테스트:
+   - 신규 사용자 관점에서 README 가이드만으로 설치 및 실행 가능한지 확인
+   - 다양한 경제 관련 질문으로 멀티 에이전트 시스템 동작 검증
+   - 여러 PDF 파일 업로드 시 성능 및 안정성 확인
+
+3. 문서화 검증:
+   - 수집된 스크린샷과 로그가 README에 적절히 반영되었는지 확인
+   - 트러블슈팅 가이드가 실제 발생 가능한 문제들을 다루는지 검증
+   - 실행 가이드의 명확성 및 완성도 확인
+
+4. 완료 조건 확인:
+   - 모든 체크리스트 항목 통과
+   - 문제점 및 개선사항 이슈화 완료
+   - README 업데이트 완료 및 실제 동작 스크린샷 포함 확인
+
+# Subtasks:
+## 1. 환경 검증 체크리스트 [done]
+### Dependencies: None
+### Description: 필수 환경 변수와 가상환경/의존성 설치 상태를 점검합니다.
+### Details:
+- .env 필수 값 확인: AOAI_ENDPOINT, AOAI_API_KEY, AOAI_DEPLOY_GPT4O, AOAI_DEPLOY_EMBED_3_LARGE
+- uv venv 생성/활성화 확인
+- uv pip install -r requirements.txt 설치 완료 확인
+- 수용 기준: 누락/오타 시 사용자 가이딩 메시지 마련 및 수정 완료
+<info added on 2025-08-11T04:46:30.551Z>
+[환경 점검 결과]
+- .env: 프로젝트 루트에 없음 → 실행 전 생성 필요 (AOAI_ENDPOINT, AOAI_API_KEY, AOAI_DEPLOY_GPT4O, AOAI_DEPLOY_EMBED_3_LARGE)
+- data/: 존재하지 않아 생성 완료 (data/.gitkeep 추가)
+- requirements.txt 확인:
+  - 포함: streamlit, langchain, langgraph, langchain-core, langchain-community, langchain-text-splitters, faiss-cpu, ddgs, python-dotenv
+  - 이슈: 앱은 `from langchain_azure_openai import AzureChatOpenAI, AzureOpenAIEmbeddings` 를 사용하나, 요구사항에 `langchain-azure-openai` 패키지가 누락되어 ImportError 가능
+    - 대응 옵션 A: requirements.txt에 `langchain-azure-openai` 추가 후 재설치
+    - 대응 옵션 B: 코드에서 `langchain_openai`(langchain-openai)로 전환하여 Azure 파라미터 기반 설정
+- 기타: ddgs, faiss-cpu, langchain-text-splitters 설치 대상 확인
+
+[결론]
+- 환경 기본 골격 준비 완료(data/ 디렉토리 생성)
+- 실행(11.2) 전 .env 값 채우기 및 의존성 점검 필요
+</info added on 2025-08-11T04:46:30.551Z>
+
+## 2. 앱 실행 및 초기 로딩 확인 [done]
+### Dependencies: None
+### Description: Streamlit 앱을 기동하여 초기 로딩 오류 유무를 점검합니다.
+### Details:
+- uv run streamlit run app.py 또는 streamlit run app.py 실행
+- 초기 로딩 스피너/에러 메시지 확인
+- 수용 기준: 실행 시 오류 없음, 초기 화면 정상 표시
+<info added on 2025-08-11T04:46:36.019Z>
+[실행 준비 상태]
+- 예상 실행 명령: `uv run streamlit run app.py` 또는 `streamlit run app.py`
+
+[차단 요소]
+1) .env 미구성 → AOAI_ENDPOINT, AOAI_API_KEY, AOAI_DEPLOY_GPT4O, AOAI_DEPLOY_EMBED_3_LARGE 필요
+2) `langchain_azure_openai` 임포트 사용 대비 `langchain-azure-openai` 패키지 미설치 시 ImportError 가능
+   - 해결책 A: requirements.txt에 `langchain-azure-openai` 추가 후 재설치
+   - 해결책 B: 코드에서 `langchain_openai`(langchain-openai)로 전환하여 Azure 매개변수를 사용
+
+[다음 조치 체크리스트]
+- `.env` 생성 및 값 적용 (예: cp .env.example .env 후 값 채우기)
+- `uv pip install -r requirements.txt` 재실행
+- 위 완료 시 앱 실행 및 초기 로딩 검증 진행 예정
+</info added on 2025-08-11T04:46:36.019Z>
+<info added on 2025-08-11T04:48:41.644Z>
+[의존성 정비 완료]
+- requirements.txt에서 `langchain-azure-openai` 패키지 제거 완료
+- app.py 코드에서 `from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings`로 임포트 전환 완료
+- Azure 파라미터(azure_endpoint, api_key, api_version, azure_deployment) 명시적 전달 방식으로 통합 완료
+- `uv pip install --upgrade -r requirements.txt` 정상 실행 완료
+
+[현재 실행 준비 상태]
+- 의존성 충돌 해결됨
+- 남은 전제 조건: .env 파일 내 Azure OpenAI 환경 변수 설정 필요 (AOAI_ENDPOINT, AOAI_API_KEY, AOAI_DEPLOY_GPT4O, AOAI_DEPLOY_EMBED_3_LARGE)
+- 환경 변수 설정 완료 시 즉시 앱 실행 및 초기 로딩 검증 진행 가능
+</info added on 2025-08-11T04:48:41.644Z>
+<info added on 2025-08-11T05:07:12.343Z>
+[실행 검증 완료]
+- Streamlit 앱 정상 기동 확인
+- 콘솔 출력: Local URL http://localhost:8501 (또는 8502), Network URL 표시
+- 초기 로딩 시 오류/예외 발생 없음
+- 프롬프트/에이전트 구성 수정 사항 정상 반영됨
+- 수용 기준 충족: 실행 오류 없음, 초기 화면 정상 표시
+
+[작업 완료]
+- 앱 실행 및 초기 로딩 확인 단계 성공적으로 완료
+- 다음 단계(11.3 파일 업로드 및 RAG 재빌드 확인)로 진행 준비 완료
+</info added on 2025-08-11T05:07:12.343Z>
+
+## 3. 파일 업로드 및 RAG 재빌드 확인 [done]
+### Dependencies: None
+### Description: PDF 업로드에 따라 RAG 파이프라인이 재생성되는지 확인합니다.
+### Details:
+- data/ 폴더 비어 있을 때 안내 메시지 확인
+- PDF 1~2개 업로드 → st.cache_resource.clear() 및 st.rerun 동작 확인
+- 사이드바에 업로드 파일명 노출 확인
+- 수용 기준: 업로드 후 검색 품질 향상/에러 없음
+<info added on 2025-08-11T05:07:17.466Z>
+[진행 계획]
+- data/ 폴더 비어 있을 때: 사이드바에 "업로드된 파일이 없습니다. 기본 데이터로 분석합니다." 안내 확인
+- PDF 1~2개 업로드 → 업로드 성공 메시지 출력 및 st.cache_resource.clear(), st.rerun 동작 확인
+- 업로드 후 사이드바에 파일명 표기 확인
+- 업로드 완료 후 질문 입력 시 RAG 검색 품질 개선 여부(문서 기반 맥락 포함) 확인
+
+[사용자 실행 가이드]
+1) Streamlit 사이드바에서 PDF 선택 후 업로드
+2) 업로드 완료 메시지 확인 → 페이지 자동 재실행
+3) 좌측 사이드바에 업로드한 파일명이 보이는지 확인
+4) 예시 질문 입력 후 결과에 문서 기반 내용이 반영되는지 검토
+
+[수용 기준]
+- 업로드 후 오류 없이 RAG 재빌드 동작
+- 사이드바 파일명 노출 및 검색 품질 향상 확인
+</info added on 2025-08-11T05:07:17.466Z>
+<info added on 2025-08-11T05:11:04.077Z>
+[무한 재실행 이슈 해결 완료]
+- 원인 분석: 업로드 완료 직후 st.rerun 호출 시, 동일한 file_uploader 위젯 인스턴스가 이전 상태를 유지하여 매 렌더마다 업로드 이벤트가 재감지되어 무한 재실행 발생
+- 해결 방안: file_uploader에 동적 key 적용(`key=f"uploader_{st.session_state.uploader_key}"`) 및 업로드 처리 후 `st.session_state.uploader_key += 1`로 키 변경하여 다음 렌더에서 위젯 상태 초기화
+- 기술적 조치: 캐시 초기화(st.cache_resource.clear())는 유지하되, 업로드 상태를 재사용하지 않도록 키 변경을 우선 적용
+
+[수정된 검증 방법]
+- PDF 업로드 → 성공 메시지 이후 한 번만 재실행되는지 확인 (무한 루프 방지)
+- 사이드바 파일명 정상 노출 확인
+- 이후 추가 업로드 시에도 동일하게 1회 재실행만 발생하는지 재검증
+- 위젯 키 변경으로 인한 업로드 기능 정상 동작 확인
+</info added on 2025-08-11T05:11:04.077Z>
+
+## 4. 질의 처리 및 멀티 에이전트 라우팅 검증 [in-progress]
+### Dependencies: None
+### Description: 질문 입력 후 Supervisor/Researcher/Analyst 단계가 정상적으로 동작하는지 확인합니다.
+### Details:
+- 예시 질문 입력 → st.status 단계별 레이블 갱신 확인
+- researcher 도구 호출(bok_document_search, web_search) 정상 동작
+- analyst 결과 생성 및 Supervisor 최종 응답(Final Answer) 수신
+- 수용 기준: 최종 응답이 사용자 채팅에 표시
+<info added on 2025-08-11T05:12:03.901Z>
+[진행 체크리스트]
+1) 예시 질문 입력: "최근 기준금리 동결의 영향 분석" 등
+2) 상태 표시(st.status) 단계 확인: Supervisor → Researcher → Analyst 순으로 레이블 변경
+3) Researcher 도구 호출 확인: bok_document_search(업로드 PDF 기반), web_search(ddgs)
+4) 오류 발생 시: error 메시지 수신 → Supervisor가 재할당/종료 판단하는지 확인
+5) 최종 응답: Supervisor 메시지에서 "Final Answer:" 이후 내용이 사용자 채팅에 표시되는지 확인
+
+[수용 기준]
+- 각 단계 레이블 정상 업데이트
+- 최소 한 번 이상 Researcher/Analyst 실행 흔적 확인
+- 최종 답변 렌더링 확인(빈 문자열 아님)
+</info added on 2025-08-11T05:12:03.901Z>
+<info added on 2025-08-11T06:52:55.731Z>
+[진행 업데이트 - 최종 응답 수집 로직 보완]
+
+**문제 해결 진행 상황:**
+- 400 에러 해결: Supervisor를 tool_calls 없는 라우팅 전용으로 전환 완료
+- 그래프 분기 개선: Analyst 노드를 END로 직접 연결하여 워크플로우 안정화
+- 새로운 이슈 발견: UI에서 최종 응답이 비어 있음 (길이=0)
+
+**원인 분석:**
+- 현재 스트리밍 로직이 supervisor 메시지에서만 최종 답변 수집
+- Analyst가 바로 END로 종료되어 supervisor의 비툴 메시지가 없으면 final_response가 공백
+
+**해결 방안 (우선순위별):**
+1) 스트리밍 루프에 analyst 노드 메시지 수집 분기 추가
+   - 조건: if "analyst" in chunk and chunk["analyst"].get("messages")
+   - 동작: final_response = chunk["analyst"]["messages"][-1].content
+2) Supervisor 프롬프트 규칙 강화로 'Final Answer:' 형식 보장
+
+**현재 상태:** 기능 동작은 확인되었으나 UI 최종 응답 표시 로직 보완 필요
+</info added on 2025-08-11T06:52:55.731Z>
+
+## 5. 예외/에러 처리 시나리오 검증 [pending]
+### Dependencies: None
+### Description: 주요 실패 케이스에서 사용자 친화적 메시지와 복구 동작을 확인합니다.
+### Details:
+- 환경 변수 누락/오류 → 가독성 있는 에러 안내
+- ddgs 검색 실패/네트워크 예외 → 안내 메시지 및 재시도 흐름
+- API rate limit/timeout 가정 → 메시지 처리 확인
+- 수용 기준: 앱 크래시 없이 안내/복구
+
+## 6. 산출물 정리 및 README 반영 [pending]
+### Dependencies: None
+### Description: 검증 로그/스크린샷을 정리하고 README에 반영합니다.
+### Details:
+- 업로드/상태 변화/최종 응답 스크린샷 수집
+- README 실행 가이드/트러블슈팅 섹션 업데이트
+- 수용 기준: 문서 변경이 리포지토리에 반영
+

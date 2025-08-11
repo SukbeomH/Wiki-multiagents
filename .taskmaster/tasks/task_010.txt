@@ -1,0 +1,51 @@
+# Task ID: 10
+# Title: 실시간 상태 시각화 및 전체 시스템 통합
+# Status: done
+# Dependencies: 9
+# Priority: high
+# Description: LangGraph 스트리밍과 st.status를 연동하여 실시간 진행 상황을 표시하고 전체 시스템을 통합합니다.
+# Details:
+1. app.py에 실시간 상태 시각화 추가:
+```python
+# 채팅 응답 처리 부분
+with st.chat_message("assistant"):
+    with st.status("분석팀이 작업을 시작합니다...", expanded=True) as status:
+        # RAG 파이프라인 구축
+        retriever = build_rag_pipeline()
+        if retriever:
+            st.write("📚 업로드된 문서를 분석에 활용합니다.")
+        
+        # 그래프 생성 및 실행
+        graph = create_graph(retriever)
+        
+        response_content = ""
+        
+        # 스트리밍 실행
+        for chunk in graph.stream(
+            {"messages": [HumanMessage(content=prompt)]},
+            stream_mode="updates"
+        ):
+            for node_name, node_output in chunk.items():
+                if node_name == "researcher":
+                    status.update(label="🔍 Researcher가 정보를 수집 중...", state="running")
+                    st.write("📊 관련 데이터 및 최신 정보 수집 완료")
+                elif node_name == "analyst":
+                    status.update(label="📈 Analyst가 보고서를 작성 중...", state="running")
+                    st.write("🎯 심층 분석 및 보고서 생성 완료")
+                    if "messages" in node_output:
+                        response_content = node_output["messages"][-1].content
+        
+        status.update(label="✅ 분석 완료!", state="complete")
+    
+    if response_content:
+        st.markdown(response_content)
+        st.session_state.messages.append({"role": "assistant", "content": response_content})
+
+# 메인 실행
+if __name__ == "__main__":
+    pass
+```
+2. 실행 스크립트 추가: `uv run streamlit run app.py`
+
+# Test Strategy:
+전체 시스템 통합 테스트: 파일 업로드 → 질문 입력 → 실시간 상태 표시 → 최종 분석 결과 출력까지의 전체 플로우 검증

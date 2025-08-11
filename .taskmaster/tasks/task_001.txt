@@ -1,0 +1,25 @@
+# Task ID: 1
+# Title: 프로젝트 환경 설정 및 의존성 설치
+# Status: done
+# Dependencies: None
+# Priority: high
+# Description: uv 패키지 매니저를 사용하여 Python 환경을 구성하고 필요한 라이브러리들을 설치합니다.
+# Details:
+1. uv 설치: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+2. Python 3.9+ 설치: `uv python install 3.12`
+3. 가상환경 생성: `uv venv`
+4. requirements.txt 생성 및 필수 패키지 정의:
+   - streamlit
+   - langchain
+   - langchain-azure-openai
+   - langgraph
+   - faiss-cpu
+   - pymupdf
+   - duckduckgo-search
+   - python-dotenv
+5. 의존성 설치: `uv pip install -r requirements.txt`
+6. .env 파일 생성 및 Azure OpenAI 설정 변수 정의
+7. data/ 디렉토리 생성
+
+# Test Strategy:
+가상환경 활성화 후 모든 패키지 import 테스트, .env 파일 로드 확인, data/ 디렉토리 존재 확인
