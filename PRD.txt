@@ -1,0 +1,107 @@
+<context>
+
+# Overview
+
+본 프로젝트는 금융 전문가, 경제 연구원, 학생 등 전문 사용자를 위한 지능형 경제 분석 시스템입니다. 사용자가 자연어로 복잡한 경제 질문을 하면, 시스템은 신뢰할 수 있는 데이터 소스(사용자 업로드 PDF, 한국은행 공식 문서, 최신 웹 뉴스)를 기반으로 심층 분석 결과를 제공합니다. 여러 전문 AI 에이전트가 LangGraph를 통해 협업하여 정보를 수집, 분석하고 최종 보고서를 생성함으로써, 사용자의 데이터 분석 시간을 단축하고 의사결정의 질을 높이는 것을 목표로 합니다.
+
+# Core Features
+
+- **멀티 에이전트 협업 분석 (Multi-Agent Collaborative Analysis)**
+  - **What it does**: 감독관(Supervisor), 연구원(Researcher), 분석가(Analyst)로 구성된 AI 팀이 협업합니다. Supervisor가 사용자의 질문을 해석해 작업을 동적으로 분배하고 조율합니다.
+  - **Why it's important**: 단일 에이전트 대비 복잡·다단계 분석에 체계적으로 대응해 답변의 깊이와 신뢰성을 향상합니다.
+  - **How it works**: LangGraph의 StateGraph로 각 에이전트를 노드로 정의합니다. Supervisor는 LLM Tool-Calling으로 다음 Worker를 결정하고 `add_conditional_edges` 로 흐름을 제어합니다.
+
+- **동적 RAG 소스 관리 (Dynamic RAG Source Management)**
+  - **What it does**: Streamlit 사이드바에서 사용자가 참고 PDF를 업로드하면 즉시 RAG 파이프라인에 반영됩니다.
+  - **Why it's important**: 최신/비공개 문서를 분석에 활용해 확장성과 개인화를 높입니다.
+  - **How it works**: 업로드 파일은 `data/` 폴더에 저장됩니다. 파일 추가 시 캐시가 초기화되고 앱이 재실행되어 `build_rag_pipeline` 이 최신 파일로 VectorStore를 재구축합니다.
+
+- **실시간 작업 과정 시각화 (Real-time Process Visualization)**
+  - **What it does**: `st.status` 를 통해 "Researcher 정보 수집 중", "Analyst 보고서 작성 중" 등 현재 진행 상황을 실시간 표시합니다.
+  - **Why it's important**: 투명한 진행 공유로 신뢰를 높이고 대기 시간 UX를 개선합니다.
+  - **How it works**: LangGraph 스트리밍 출력을 수신해 노드 활성화 시 `st.status` 레이블을 갱신합니다.
+
+# User Experience
+
+## User Personas
+- **금융 애널리스트(박서준, 35세)**: 근거 출처를 중시하며 분기 보고서를 빠르고 정확하게 작성해야 합니다.
+- **경제학 대학원생(김민지, 26세)**: 논문 연구를 위해 정책 배경·영향을 다각도로 분석하고 직접 업로드한 논문 PDF를 활용하고자 합니다.
+- **경제 전문 기자(이하나, 41세)**: 최신 경제 이벤트에 대해 사실 기반 정보와 전문가 수준 분석을 신속히 필요로 합니다.
+
+## Key User Flows
+- (선택) 사이드바의 "파일 업로드" 버튼으로 분석 참고 PDF 업로드
+- 업로드 성공 및 RAG 시스템 업데이트 메시지 표시
+- 메인 채팅창에 "업로드한 보고서를 바탕으로 최근 금리 동결의 영향을 분석해줘" 등의 질문 입력
+- "분석팀이 작업을 시작합니다..." 상태 메시지와 단계별 실시간 진행 표시
+- 최종 분석 결과가 채팅창에 텍스트로 출력
+
+## UI/UX Considerations
+- **직관성**: 학습 없이 바로 사용할 수 있는 단순한 채팅·업로드 인터페이스
+- **투명성**: 실시간 상태 업데이트로 AI의 진행 과정을 노출
+- **피드백**: 업로드 성공, RAG 업데이트 등 상태 변화를 명확히 안내
+
+</context>
+
+<PRD>
+
+# Technical Architecture
+
+## System Components
+- **Frontend**: Streamlit
+- **Orchestration**: LangGraph
+- **LLM Service**: Azure OpenAI Service (gpt-4o)
+- **Vector Database**: FAISS (In-memory, 동적 재생성)
+- **File Storage**: Local `data/` directory
+- **Web Search API**: DDGS
+
+## Data Models
+- **AgentState**: `TypedDict` 로 정의되며 에이전트 간 대화 기록(`messages`)과 LangGraph 상태를 관리
+
+## APIs and Integrations
+- `langchain-azure-openai` 로 Azure OpenAI Chat Completions/Embeddings 연동
+- `ddgs` 직접 호출로 외부 웹 검색 통합
+- `glob`, `PyMuPDFLoader` 로 로컬 PDF를 동적으로 로드
+
+## Infrastructure Requirements
+- Python 3.9+
+- `.env` 기반 환경 변수 관리 (API 키, 엔드포인트 등)
+
+- 런타임/패키지 매니저: uv 권장
+  - 공식 문서: https://docs.astral.sh/uv/guides/install-python/
+  - Python 설치(선택): `uv python install` 또는 특정 버전 `uv python install 3.12`
+  - 가상환경: `uv venv` (활성화: `.venv/bin/activate` 또는 Windows `.venv\Scripts\activate`)
+  - 의존성 설치: `uv pip install -r requirements.txt`
+  - 실행: `uv run streamlit run app.py`
+
+# Development Roadmap
+
+## MVP (Minimum Viable Product)
+- Supervisor, Researcher, Analyst 3개 에이전트 협업으로 단일 질문 분석 핵심 기능
+- `data/` 폴더 PDF를 동적으로 로드하는 RAG 파이프라인 구축
+- Streamlit 채팅 UI, 파일 업로드, 실시간 상태 업데이트 구현
+
+## Future Enhancements (Phase 2)
+- 차트 생성 에이전트 추가: 수치 데이터 시각화 후 보고서 포함
+- 사용자 피드백: 답변에 "좋아요/싫어요" 및 의견 수집 기능
+- 데이터 소스 확장: 통계청 KOSIS 등 공공 데이터 포털 연동
+- 답변 출처 명시: 문서명·페이지·URL 등을 결과와 함께 제공
+
+# Logical Dependency Chain
+- **Foundation(기반 구축)**: Azure OpenAI 연동 및 `requirements.txt` 환경 설정(uv 기반 설치) → `build_rag_pipeline` 로 `data/` 스캔해 FAISS 벡터 DB 구축
+- **Agent Core(에이전트 구현)**: `AgentState` 정의, `create_agent` 로 Researcher/Analyst 구현
+- **Orchestration(워크플로우 설계)**: Supervisor 구현, `StateGraph` 로 연결 및 `create_graph` 완성
+- **Frontend(UI 개발)**: 컴파일된 LangGraph 에이전트와 상호작용하는 Streamlit `main` 개발 (파일 업로드, RAG 업데이트 트리거, 실시간 상태 시각화 포함)
+
+# Risks and Mitigations
+- **Risk: LLM 환각(Hallucination)**
+  - Mitigation: 근거를 신뢰 높은 RAG 소스에 한정. Researcher/Analyst 프롬프트로 데이터 내 근거 기반 분석을 강제
+- **Risk: 대용량 파일 처리 문제**
+  - Mitigation: MVP에선 제한 없음. Phase 2에 파일 크기 제한(예: 50MB) 또는 백그라운드 처리 도입
+- **Risk: 복잡 질문에 대한 작업 계획 실패**
+  - Mitigation: Supervisor 시스템 프롬프트에 역할·책임과 일반 순서(Researcher → Analyst) 명시, 향후 사용자 피드백 반영 기능 추가
+
+# Appendix
+- **과제 평가 기준**: Prompt Engineering, LangChain/LangGraph, RAG, Streamlit 항목 충족을 목표로 설계/구현
+- **참고 자료**: LangChain·LangGraph 공식 문서, 제공된 학습용 노트북(`langgraph.ipynb`, `agent_supervisor_manual.md`, `04-Retriever.ipynb` 등)
+
+</PRD>

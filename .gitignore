@@ -1,3 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Env files
+.env
+.env.*
+!.env.template
+
+# macOS
+.DS_Store
+
+# Streamlit
+.streamlit/
+
+# Local artifacts
+bok_reports.txt
+
 # Logs
 logs
 *.log
@@ -5,23 +28,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 dev-debug.log
-uvicorn.log
-
 # Dependency directories
 node_modules/
-.cursor/
-.taskmaster/
-
 # Environment variables
-env/
-venv/
-ENV/
-ENV*/
-venv*/
-env*/
-*.env
-*.venv
-
 # Editor directories and files
 .idea
 .vscode
@@ -30,42 +39,7 @@ env*/
 *.njsproj
 *.sln
 *.sw?
-
 # OS specific
-.DS_Store
-
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.pyc
-*.pyo
-*.pyd
-.Python
-.mypy_cache/
-.pytest_cache/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pyre/
-.pytype/
-*.db
-*.sqlite3
-history.db
-data/*.db
-data/cache/
-data/checkpoints/
-data/locks/
-data/vector_indices/
-data/workflows/
-
-.env
 
 # Task files
 # tasks.json

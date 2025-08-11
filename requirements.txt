@@ -1,166 +1,19 @@
-# =============================================================================
-# AI Knowledge Graph System - Python Dependencies
-# =============================================================================
+# Core application framework
+streamlit
 
-# Web Framework & API
-streamlit==1.24.0
-fastapi==0.100.0
-uvicorn==0.22.0
-requests==2.31.0
+# LangChain ecosystem for building LLM applications
+langchain
+langgraph
+langchain-core
+langchain-community
+langchain-openai
+langchain-text-splitters
 
-# Data Models & Validation
-pydantic>=2.7,<3
-pydantic-settings>=2.2,<3
+# Vector store for RAG
+faiss-cpu
 
-# =============================================================================
-# AI & LLM Integration
-# =============================================================================
-# Azure OpenAI
-openai==1.3.0
+# Tools used by the agent
+ddgs
 
-# LangChain & LangGraph (Workflow Orchestration)
-langchain==0.3.27
-langchain-openai==0.3.28
-langchain-community==0.3.27
-langgraph==0.6.4
-langsmith==0.4.13
-
-# =============================================================================
-# Natural Language Processing (NLP)
-# =============================================================================
-# spaCy NLP Library
-spacy>=3.7.0
-spacy-transformers>=1.3.0  # For transformer-based models
-
-# Korean Relation Extraction
-korre>=0.1.0  # 한국어 관계 추출 라이브러리
-
-# =============================================================================
-# Database & Storage
-# =============================================================================
-# RDFLib Knowledge Graph (Neo4j 대체)
-rdflib==7.0.0
-rdflib-sqlalchemy==0.5.0
-rdflib-jsonld==0.6.1
-
-# Cache & State Management (Redis 완전 대체)
-diskcache==5.6.3       # 로컬 디스크 캐시 (Redis 대체)
-fakeredis==2.20.1      # Redis API 호환성 (테스트/개발용)
-filelock==3.13.1       # 분산 락 관리 (Redis Redlock 대체)
-
-# SQLite (Development/Testing)
-sqlalchemy<2.0
-
-# =============================================================================
-# Vector Store & Embeddings
-# =============================================================================
-# FAISS Vector Database
-faiss-cpu>=1.11.0
-# faiss-gpu>=1.11.0  # Use for GPU acceleration
-
-# Embeddings & Similarity
-sentence-transformers==2.2.2; python_version < "3.13"
-numpy<2.0
-scikit-learn==1.3.2; python_version < "3.13"
-
-# =============================================================================
-# Search & Data Collection
-# =============================================================================
-# Web Search APIs (API 키 불필요)
-ddgs==9.5.2                    # DuckDuckGo 검색 (API 키 불필요, 최신 버전 - duckduckgo-search → ddgs로 변경)
-# google-search-results==2.4.2  # SerpAPI (제거 - API 키 필요)
-wikipedia==1.4.0
-
-# Caching & Performance
-cachetools>=5.6.0              # LRU 캐시 및 고급 캐싱 기능
-
-# Web Scraping & Processing
-beautifulsoup4==4.12.2
-trafilatura==1.6.3
-
-# =============================================================================
-# UI Components & Visualization
-# =============================================================================
-# Streamlit Extensions
-streamlit-agraph==0.0.45
-
-plotly==5.17.0
-altair==5.2.0
-
-# =============================================================================
-# Template & Document Processing
-# =============================================================================
-# Jinja2 Templates
-jinja2==3.1.2
-markupsafe==2.1.3
-
-# Markdown Processing
-markdown==3.5.1
-
-# =============================================================================
-# Authentication & Security
-# =============================================================================
-# JWT & Auth
-pyjwt==2.8.0
-passlib==1.7.4
-python-multipart==0.0.6
-python-jose==3.3.0
-
-# OAuth2
-authlib==1.2.1
-
-# =============================================================================
-# Communication & Notifications
-# =============================================================================
-# Slack Integration (제거됨 - 단순화 계획에 따라)
-# slack-sdk==3.26.1
-# slack-bolt==1.18.1
-
-# Email (Optional)
-
-# =============================================================================
-# Utilities & Development
-# =============================================================================
-# Environment & Configuration
-python-dotenv==1.0.0
-click==8.1.7
-
-# Date & Time
-python-dateutil==2.8.2
-pytz==2023.3
-
-# Async & Concurrency
-aiohttp==3.9.1
-aiofiles==23.2.1
-
-# Retry & Error Handling
-tenacity==8.2.3
-backoff==2.2.1
-
-# Monitoring & Logging
-structlog==23.2.0
-prometheus-client==0.19.0
-psutil==5.9.6                    # 시스템 리소스 모니터링
-
-# Data Processing
-pandas==2.1.4
-jsonschema==4.20.0
-
-# =============================================================================
-# Testing & Development
-# =============================================================================
-# Testing Framework
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-pytest-mock==3.12.0
-
-# Code Quality
-black==23.11.0
-flake8==6.1.0
-isort==5.12.0
-mypy==1.7.1
-
-# Development Tools
-ipython==8.17.2
-jupyter==1.0.0
+# Utility for environment variable management
+python-dotenv
