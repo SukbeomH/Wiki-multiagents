@@ -1,161 +1,57 @@
 # ==============================================================================
 # 1. 라이브러리 임포트 (Imports & Setup)
 # ==============================================================================
+# 최신 LangChain v0.2.x 및 v0.3.x 버전에 맞춰 모듈화된 라이브러리들을 임포트합니다.
 import os
 import logging
 import json
 import glob
 import time
-import re
 import streamlit as st
 from dotenv import load_dotenv
-from typing import TypedDict, Annotated, List, Dict, Any, Optional
+from typing import TypedDict, Annotated, List
 from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, BaseMessage
 
 # LangGraph 및 에이전트 관련
 from langgraph.graph import StateGraph, END
-from langgraph.graph.message import add_messages
-from langchain.agents import AgentExecutor
+from langgraph.graph.message import add_messages # AnyMessageEditor 대신 add_messages를 임포트
+from langchain.agents import create_react_agent, AgentExecutor
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import Tool
 
+
 # Azure OpenAI 및 RAG 관련
+# langchain-azure-openai -> langchain_openai 로 변경
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_community.document_loaders import PyMuPDFLoader # PDF 로더 변경
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
-from ddgs import DDGS
+from ddgs import DDGS # ddgs 라이브러리로 변경
 
 
 # ==============================================================================
-# 2. 설정 및 유틸리티 클래스 (Configuration & Utility Classes)
+# 2. 환경설정 및 모델 팩토리 (Configuration & Model Factory)
 # ==============================================================================
+AZURE_API_VERSION = "2024-02-01"
+DATA_DIR = "data" # 업로드된 PDF를 저장할 디렉토리
+APP_GRAPH_VERSION = "3"
 
-class Config:
-    """애플리케이션 설정을 관리하는 클래스"""
-    AZURE_API_VERSION = "2024-02-01"
-    DATA_DIR = "data"
-    APP_GRAPH_VERSION = "3"
-    MAX_ITERATIONS = 10
-    TIMEOUT_SECONDS = 300
-    
-    # RAG 설정
-    RAG_SEARCH_STRATEGY = os.getenv("RAG_SEARCH_STRATEGY", "mmr")
-    RAG_K = int(os.getenv("RAG_K", "5"))
-    RAG_FETCH_K = int(os.getenv("RAG_FETCH_K", "20"))
-    RAG_LAMBDA_MULT = float(os.getenv("RAG_LAMBDA_MULT", "0.7"))
-    RAG_SCORE_THRESHOLD = float(os.getenv("RAG_SCORE_THRESHOLD", "0.7"))
-    RAG_USE_COMPRESSION = os.getenv("RAG_USE_COMPRESSION", "false").lower() == "true"
-    
-    # 출력 형식
-    CITATION_FORMAT = "📄 {source} (p.{page}) - 신뢰도: {confidence}%"
-    RESEARCHER_OUTPUT_FORMAT = """
-분석 요청: {query}
-
-수집된 정보:
-{content}
-
-출처 정보:
-{source_info}
-
-신뢰도 평가: {reliability_score}/10
-"""
-    ANALYST_OUTPUT_FORMAT = """
-분석 결과:
-{analysis}
-
-근거 및 출처:
-{evidence}
-
-결론:
-{conclusion}
-"""
-
-class Logger:
-    """로깅 설정을 관리하는 클래스"""
-    def __init__(self):
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        )
-        self.logger = logging.getLogger("econ-analyzer")
-        _log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-        try:
-            self.logger.setLevel(_log_level)
-        except Exception:
-            self.logger.setLevel(logging.INFO)
-        
-        # 로그 캡처를 위한 리스트
-        self.log_buffer = []
-        self.max_logs = 100  # 최대 로그 개수
-        
-        # 커스텀 핸들러 추가
-        self.handler = LogCaptureHandler(self.log_buffer, self.max_logs)
-        self.logger.addHandler(self.handler)
-    
-    def info(self, message, *args):
-        self.logger.info(message, *args)
-    
-    def warning(self, message, *args):
-        self.logger.warning(message, *args)
-    
-    def error(self, message, *args):
-        self.logger.error(message, *args)
-    
-    def exception(self, message, *args):
-        self.logger.exception(message, *args)
-    
-    def debug(self, message, *args):
-        self.logger.debug(message, *args)
-    
-    def get_recent_logs(self, count=20):
-        """최근 로그들을 반환합니다."""
-        return self.log_buffer[-count:] if self.log_buffer else []
-    
-    def clear_logs(self):
-        """로그 버퍼를 클리어합니다."""
-        self.log_buffer.clear()
-
-
-class LogCaptureHandler(logging.Handler):
-    """로그를 캡처하는 커스텀 핸들러"""
-    def __init__(self, log_buffer, max_logs):
-        super().__init__()
-        self.log_buffer = log_buffer
-        self.max_logs = max_logs
-    
-    def emit(self, record):
-        try:
-            # 로그 메시지 포맷팅
-            msg = self.format(record)
-            
-            # 로그 레벨에 따른 이모지 추가
-            level_emoji = {
-                'DEBUG': '🔍',
-                'INFO': 'ℹ️',
-                'WARNING': '⚠️',
-                'ERROR': '❌',
-                'CRITICAL': '🚨'
-            }
-            
-            emoji = level_emoji.get(record.levelname, 'ℹ️')
-            formatted_msg = f"{emoji} {msg}"
-            
-            # 버퍼에 추가
-            self.log_buffer.append(formatted_msg)
-            
-            # 최대 개수 제한
-            if len(self.log_buffer) > self.max_logs:
-                self.log_buffer.pop(0)
-                
-        except Exception:
-            pass
-
-# 전역 로거 인스턴스
-logger = Logger()
+# ==============================================================================
+# 로깅 설정 (Terminal 로그 출력)
+# ==============================================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger("econ-analyzer")
+_log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+try:
+    logger.setLevel(_log_level)
+except Exception:
+    logger.setLevel(logging.INFO)
 
 def setup_environment():
     """환경 변수를 로드하고 필수 변수가 설정되었는지 확인합니다."""
@@ -170,267 +66,193 @@ def setup_environment():
 
 class AzureModelFactory:
     """Azure OpenAI 모델 인스턴스를 중앙에서 관리하고 생성하는 헬퍼 클래스."""
-    
     def __init__(self):
         self.endpoint = os.getenv("AOAI_ENDPOINT")
         self.api_key = os.getenv("AOAI_API_KEY")
         self.gpt4o_deployment = os.getenv("AOAI_DEPLOY_GPT4O")
         self.embedding_deployment = os.getenv("AOAI_DEPLOY_EMBED_3_LARGE")
-        self._chat_model_cache = {}
-        self._embedding_model_cache = None
 
     def get_chat_model(self, temperature=0):
-        """채팅 모델 인스턴스를 반환합니다. 캐싱을 통해 성능을 최적화합니다."""
-        cache_key = f"chat_{temperature}"
-        if cache_key not in self._chat_model_cache:
-            logger.info("[model] AzureChatOpenAI 인스턴스 생성 (temp=%s)", temperature)
-            self._chat_model_cache[cache_key] = AzureChatOpenAI(
-                azure_deployment=self.gpt4o_deployment,
-                api_version=Config.AZURE_API_VERSION,
-                azure_endpoint=self.endpoint,
-                api_key=self.api_key,
-                temperature=temperature,
-                max_retries=5,
-                timeout=60,
-                request_timeout=60,
-            )
-        return self._chat_model_cache[cache_key]
+        """채팅 모델 인스턴스를 반환합니다."""
+        logger.info("[model] AzureChatOpenAI 인스턴스 생성 (temp=%s)", temperature)
+        return AzureChatOpenAI(
+            azure_deployment=self.gpt4o_deployment,
+            api_version=AZURE_API_VERSION,
+            azure_endpoint=self.endpoint,
+            api_key=self.api_key,
+            temperature=temperature,
+            max_retries=5,  # 재시도 횟수 증가 (3 → 5)
+            timeout=60,     # 타임아웃 증가 (30 → 60초)
+            request_timeout=60,  # 요청 타임아웃 명시적 설정
+        )
 
     def get_embedding_model(self):
-        """임베딩 모델 인스턴스를 반환합니다. 싱글톤 패턴으로 캐싱합니다."""
-        if self._embedding_model_cache is None:
-            logger.info("[model] AzureOpenAIEmbeddings 인스턴스 생성")
-            self._embedding_model_cache = AzureOpenAIEmbeddings(
-                azure_deployment=self.embedding_deployment,
-                api_version=Config.AZURE_API_VERSION,
-                azure_endpoint=self.endpoint,
-                api_key=self.api_key,
-            )
-        return self._embedding_model_cache
-
-    def clear_cache(self):
-        """모델 캐시를 초기화합니다."""
-        self._chat_model_cache.clear()
-        self._embedding_model_cache = None
-        logger.info("[model] 모델 캐시 초기화 완료")
+        """임베딩 모델 인스턴스를 반환합니다."""
+        logger.info("[model] AzureOpenAIEmbeddings 인스턴스 생성")
+        return AzureOpenAIEmbeddings(
+            azure_deployment=self.embedding_deployment,
+            api_version=AZURE_API_VERSION,
+            azure_endpoint=self.endpoint,
+            api_key=self.api_key,
+        )
 
 # ==============================================================================
-# 3. 웹 검색 도구 (Web Search Tool)
+# 2.5. ddgs 기반 웹 검색 도구 정의 (New Web Search Tool)
 # ==============================================================================
-
-class WebSearchTool:
-    """웹 검색 기능을 제공하는 클래스"""
-    
-    def __init__(self, max_retries: int = 3, initial_retry_delay: float = 1.0):
-        self.max_retries = max_retries
-        self.initial_retry_delay = initial_retry_delay
-    
-    def search(self, query: str, max_results: int = 5) -> str:
-        """
-        ddgs 라이브러리를 사용하여 DuckDuckGo 웹 검색을 수행하고 결과를 포맷팅합니다.
-        재시도 로직과 폴백 메커니즘을 포함합니다.
-        """
-        # 웹검색 토글 확인
-        if not st.session_state.get("web_search_enabled", True):
-            return "웹검색이 비활성화되어 있습니다. 사이드바에서 웹검색을 활성화하세요."
-        
-        retry_delay = self.initial_retry_delay
-        
-        for attempt in range(self.max_retries):
-            try:
-                logger.info("[web-search] query='%s' (시도 %d/%d)", query, attempt + 1, self.max_retries)
-                with DDGS() as ddgs:
-                    results = [r for r in ddgs.text(query, max_results=max_results)]
-                    if not results:
-                        logger.info("[web-search] 결과 0건")
-                        return "검색 결과가 없습니다."
-                    
-                    formatted_results = self._format_results(results)
-                    logger.info("[web-search] 결과 %d건", len(formatted_results))
-                    return "\n".join(formatted_results)
-                    
-            except Exception as e:
-                logger.warning("[web-search] 시도 %d/%d 실패: %s", attempt + 1, self.max_retries, e)
-                if attempt < self.max_retries - 1:
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # 지수 백오프
-                else:
-                    logger.exception("[web-search] 모든 시도 실패")
-                    return f"웹 검색 중 오류가 발생했습니다: {e}"
-        
-        return "웹 검색을 완료할 수 없습니다."
-    
-    def _format_results(self, results: List[Dict[str, Any]]) -> List[str]:
-        """검색 결과를 포맷팅합니다."""
-        formatted_results = []
-        for i, res in enumerate(results, 1):
-            formatted_results.append(
-                f"결과 {i}: {res['title']}\n"
-                f"요약: {res['body']}\n"
-                f"URL: {res['href']}\n---"
-            )
-        return formatted_results
-
-# 전역 웹 검색 도구 인스턴스
-web_search_tool = WebSearchTool()
-
 def web_search_func(query: str, max_results: int = 5) -> str:
-    """웹 검색 함수 (기존 인터페이스 유지)"""
-    return web_search_tool.search(query, max_results)
-
-
-# ==============================================================================
-# 4. RAG 파이프라인 (RAG Pipeline)
-# ==============================================================================
-
-class RAGPipeline:
-    """RAG (Retrieval-Augmented Generation) 파이프라인을 관리하는 클래스"""
+    """
+    ddgs 라이브러리를 사용하여 DuckDuckGo 웹 검색을 수행하고 결과를 포맷팅합니다.
+    재시도 로직과 폴백 메커니즘을 포함합니다.
+    """
+    # 웹검색 토글 확인
+    if not st.session_state.get("web_search_enabled", True):
+        return "웹검색이 비활성화되어 있습니다. 사이드바에서 웹검색을 활성화하세요."
     
-    def __init__(self, model_factory: AzureModelFactory):
-        self.model_factory = model_factory
-        self.vectorstore = None
-        self.retriever = None
-        self.index_path = "faiss_index"
-        self.invalidation_file = "invalidation.txt"
+    max_retries = 3
+    retry_delay = 1  # 초기 재시도 지연 (초)
     
-    def save_faiss_index(self, vectorstore, index_path: str) -> bool:
-        """FAISS 인덱스를 파일로 저장합니다."""
+    for attempt in range(max_retries):
         try:
-            vectorstore.save_local(index_path)
-            logger.info("[rag] FAISS 인덱스 저장 완료: %s", index_path)
-            return True
+            logger.info("[web-search] query='%s' (시도 %d/%d)", query, attempt + 1, max_retries)
+            with DDGS() as ddgs:
+                results = [r for r in ddgs.text(query, max_results=max_results)]
+                if not results:
+                    logger.info("[web-search] 결과 0건")
+                    return "검색 결과가 없습니다."
+                
+                formatted_results = []
+                for i, res in enumerate(results, 1):
+                    formatted_results.append(f"결과 {i}: {res['title']}\n요약: {res['body']}\nURL: {res['href']}\n---")
+                logger.info("[web-search] 결과 %d건", len(formatted_results))
+                return "\n".join(formatted_results)
+                
         except Exception as e:
-            logger.exception("[rag] FAISS 인덱스 저장 실패: %s", e)
-            return False
-
-    def load_faiss_index(self, index_path: str, embeddings) -> Optional[FAISS]:
-        """저장된 FAISS 인덱스를 로드합니다."""
-        try:
-            if os.path.exists(index_path):
-                vectorstore = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
-                logger.info("[rag] FAISS 인덱스 로드 완료: %s", index_path)
-                return vectorstore
+            logger.warning("[web-search] 시도 %d/%d 실패: %s", attempt + 1, max_retries, e)
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+                retry_delay *= 2  # 지수 백오프
             else:
-                logger.warning("[rag] FAISS 인덱스 파일이 존재하지 않음: %s", index_path)
-                return None
-        except Exception as e:
-            logger.exception("[rag] FAISS 인덱스 로드 실패: %s", e)
+                logger.exception("[web-search] 모든 시도 실패")
+                return f"웹 검색 중 오류가 발생했습니다: {e}"
+    
+    return "웹 검색을 완료할 수 없습니다."
+
+
+# ==============================================================================
+# 3. 고급 RAG 파이프라인 구축 (Advanced RAG Pipeline with Dynamic PDF Loading)
+# ==============================================================================
+def save_faiss_index(vectorstore, index_path: str):
+    """FAISS 인덱스를 파일로 저장합니다."""
+    try:
+        vectorstore.save_local(index_path)
+        logger.info("[rag] FAISS 인덱스 저장 완료: %s", index_path)
+        return True
+    except Exception as e:
+        logger.exception("[rag] FAISS 인덱스 저장 실패: %s", e)
+        return False
+
+def load_faiss_index(index_path: str, embeddings):
+    """저장된 FAISS 인덱스를 로드합니다."""
+    try:
+        if os.path.exists(index_path):
+            # allow_dangerous_deserialization=True 추가 (로컬에서 생성한 파일이므로 안전)
+            vectorstore = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
+            logger.info("[rag] FAISS 인덱스 로드 완료: %s", index_path)
+            return vectorstore
+        else:
+            logger.warning("[rag] FAISS 인덱스 파일이 존재하지 않음: %s", index_path)
             return None
+    except Exception as e:
+        logger.exception("[rag] FAISS 인덱스 로드 실패: %s", e)
+        return None
 
-    def create_mmr_retriever(self, vectorstore, k=5, fetch_k=20, lambda_mult=0.7):
-        """MMR (Maximum Marginal Relevance) 검색을 사용하는 리트리버를 생성합니다."""
-        return vectorstore.as_retriever(
-            search_type="mmr",
-            search_kwargs={
-                "k": k,
-                "fetch_k": fetch_k,
-                "lambda_mult": lambda_mult
-            }
+def create_mmr_retriever(vectorstore, k=5, fetch_k=20, lambda_mult=0.7):
+    """MMR (Maximum Marginal Relevance) 검색을 사용하는 리트리버를 생성합니다."""
+    return vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={
+            "k": k,
+            "fetch_k": fetch_k,
+            "lambda_mult": lambda_mult  # 다양성 vs 관련성 균형 (0.7 = 관련성 70%, 다양성 30%)
+        }
+    )
+
+def create_similarity_retriever(vectorstore, k=5, score_threshold=0.7):
+    """유사도 기반 검색을 사용하는 리트리버를 생성합니다."""
+    return vectorstore.as_retriever(
+        search_type="similarity",
+        search_kwargs={
+            "k": k,
+            "score_threshold": score_threshold
+        }
+    )
+
+def create_compressed_retriever(base_retriever, llm):
+    """컨텍스트 압축을 사용하는 리트리버를 생성합니다."""
+    try:
+        compressor = LLMChainExtractor.from_llm(llm)
+        compressed_retriever = ContextualCompressionRetriever(
+            base_compressor=compressor,
+            base_retriever=base_retriever
         )
+        logger.info("[rag] ContextualCompressionRetriever 생성 완료")
+        return compressed_retriever
+    except Exception as e:
+        logger.warning("[rag] ContextualCompressionRetriever 생성 실패, 기본 리트리버 사용: %s", e)
+        return base_retriever
 
-    def create_similarity_retriever(self, vectorstore, k=5, score_threshold=0.7):
-        """유사도 기반 검색을 사용하는 리트리버를 생성합니다."""
-        return vectorstore.as_retriever(
-            search_type="similarity",
-            search_kwargs={
-                "k": k,
-                "score_threshold": score_threshold
-            }
-        )
-
-    def create_compressed_retriever(self, base_retriever, llm):
-        """컨텍스트 압축을 사용하는 리트리버를 생성합니다."""
+@st.cache_resource
+def build_rag_pipeline(cache_key: str):
+    """
+    'data' 폴더 내의 모든 PDF를 동적으로 로드하여 RAG 파이프라인을 구축합니다.
+    FAISS 인덱스 영속화, MMR 검색, 컨텍스트 압축을 포함합니다.
+    """
+    logger.info("[rag] 파이프라인 빌드 시작 (cache_key=%s)", cache_key)
+    
+    # FAISS 인덱스 저장 경로
+    index_path = os.path.join(DATA_DIR, "faiss_index")
+    
+    # 임베딩 모델 초기화
+    from langchain_openai import AzureOpenAIEmbeddings
+    endpoint = os.getenv("AOAI_ENDPOINT")
+    api_key = os.getenv("AOAI_API_KEY")
+    embed_deploy = os.getenv("AOAI_DEPLOY_EMBED_3_LARGE")
+    embeddings = AzureOpenAIEmbeddings(
+        azure_deployment=embed_deploy,
+        api_version=AZURE_API_VERSION,
+        azure_endpoint=endpoint,
+        api_key=api_key,
+    )
+    
+    # PDF 파일 변경 확인
+    pdf_files = glob.glob(os.path.join(DATA_DIR, "*.pdf"))
+    current_pdf_mtime = max([os.path.getmtime(f) for f in pdf_files]) if pdf_files else 0
+    
+    # 인덱스 무효화 파일 확인
+    invalidation_file = os.path.join(index_path, "invalidation.txt")
+    index_needs_rebuild = True
+    
+    if os.path.exists(invalidation_file):
         try:
-            compressor = LLMChainExtractor.from_llm(llm)
-            compressed_retriever = ContextualCompressionRetriever(
-                base_compressor=compressor,
-                base_retriever=base_retriever
-            )
-            logger.info("[rag] ContextualCompressionRetriever 생성 완료")
-            return compressed_retriever
+            with open(invalidation_file, 'r') as f:
+                stored_mtime = float(f.read().strip())
+            if stored_mtime >= current_pdf_mtime:
+                index_needs_rebuild = False
+                logger.info("[rag] PDF 파일 변경 없음, 기존 인덱스 사용 가능")
         except Exception as e:
-            logger.warning("[rag] ContextualCompressionRetriever 생성 실패, 기본 리트리버 사용: %s", e)
-            return base_retriever
+            logger.warning("[rag] 무효화 파일 읽기 실패: %s", e)
     
-    def build_pipeline(self, cache_key: str):
-        """
-        'data' 폴더 내의 모든 PDF를 동적으로 로드하여 RAG 파이프라인을 구축합니다.
-        FAISS 인덱스 영속화, MMR 검색, 컨텍스트 압축을 포함합니다.
-        """
-        logger.info("[rag] 파이프라인 빌드 시작 (cache_key=%s)", cache_key)
-        
-        # FAISS 인덱스 저장 경로
-        index_path = os.path.join(Config.DATA_DIR, "faiss_index")
-        
-        # 임베딩 모델 초기화
-        embeddings = self.model_factory.get_embedding_model()
-        
-        # PDF 파일 변경 확인
-        pdf_files = glob.glob(os.path.join(Config.DATA_DIR, "*.pdf"))
-        current_pdf_mtime = max([os.path.getmtime(f) for f in pdf_files]) if pdf_files else 0
-        
-        # 인덱스 무효화 파일 확인
-        invalidation_file = os.path.join(index_path, "invalidation.txt")
-        index_needs_rebuild = True
-        
-        if os.path.exists(invalidation_file):
-            try:
-                with open(invalidation_file, 'r') as f:
-                    stored_mtime = float(f.read().strip())
-                if stored_mtime >= current_pdf_mtime:
-                    index_needs_rebuild = False
-                    logger.info("[rag] PDF 파일 변경 없음, 기존 인덱스 사용 가능")
-            except Exception as e:
-                logger.warning("[rag] 무효화 파일 읽기 실패: %s", e)
-        
-        # 저장된 인덱스 로드 시도
-        vectorstore = None
-        if not index_needs_rebuild:
-            vectorstore = self.load_faiss_index(index_path, embeddings)
-        
-        if vectorstore is None:
-            # 새로 빌드
-            vectorstore = self._build_new_index(pdf_files, embeddings, index_path, current_pdf_mtime, invalidation_file)
-        else:
-            logger.info("[rag] 기존 FAISS 인덱스 사용")
-
-        # LLM 초기화
-        llm = self.model_factory.get_chat_model()
-        
-        # 검색 전략 선택
-        if Config.RAG_SEARCH_STRATEGY == "mmr":
-            base_retriever = self.create_mmr_retriever(
-                vectorstore, 
-                k=Config.RAG_K, 
-                fetch_k=Config.RAG_FETCH_K, 
-                lambda_mult=Config.RAG_LAMBDA_MULT
-            )
-        elif Config.RAG_SEARCH_STRATEGY == "similarity":
-            base_retriever = self.create_similarity_retriever(
-                vectorstore, 
-                k=Config.RAG_K, 
-                score_threshold=Config.RAG_SCORE_THRESHOLD
-            )
-        else:
-            base_retriever = vectorstore.as_retriever(search_kwargs={"k": Config.RAG_K})
-        
-        # 컨텍스트 압축 적용
-        if Config.RAG_USE_COMPRESSION:
-            retriever = self.create_compressed_retriever(base_retriever, llm)
-        else:
-            retriever = base_retriever
-        
-        self.vectorstore = vectorstore
-        self.retriever = retriever
-        
-        logger.info("[rag] 파이프라인 빌드 완료")
-        return retriever
+    # 저장된 인덱스 로드 시도
+    vectorstore = None
+    if not index_needs_rebuild:
+        vectorstore = load_faiss_index(index_path, embeddings)
     
-    def _build_new_index(self, pdf_files, embeddings, index_path, current_pdf_mtime, invalidation_file):
-        """새로운 FAISS 인덱스를 빌드합니다."""
+    if vectorstore is None:
+        # 새로 빌드
         logger.info("[rag] 새 인덱스 빌드 시작")
         all_docs = []
         
+        pdf_files = glob.glob(os.path.join(DATA_DIR, "*.pdf"))
         logger.info("[rag] PDF 파일 수: %d", len(pdf_files))
         
         if not pdf_files:
@@ -459,7 +281,7 @@ class RAGPipeline:
         logger.info("[rag] FAISS 벡터스토어 생성 완료")
         
         # 인덱스 저장
-        if self.save_faiss_index(vectorstore, index_path):
+        if save_faiss_index(vectorstore, index_path):
             # 무효화 파일 저장
             try:
                 os.makedirs(index_path, exist_ok=True)
@@ -468,23 +290,71 @@ class RAGPipeline:
                 logger.info("[rag] 무효화 파일 저장 완료: %s", current_pdf_mtime)
             except Exception as e:
                 logger.warning("[rag] 무효화 파일 저장 실패: %s", e)
-        
-        return vectorstore
+    else:
+        logger.info("[rag] 기존 FAISS 인덱스 사용")
 
-# 전역 RAG 파이프라인 인스턴스 (나중에 초기화)
-rag_pipeline = None
-
-@st.cache_resource
-def build_rag_pipeline(cache_key: str):
-    """
-    RAG 파이프라인을 구축합니다. 클래스 기반 구조로 변경되었습니다.
-    """
-    global rag_pipeline
-    if rag_pipeline is None:
-        model_factory = AzureModelFactory()
-        rag_pipeline = RAGPipeline(model_factory)
+    # LLM 초기화
+    from langchain_openai import AzureChatOpenAI
+    chat_deploy = os.getenv("AOAI_DEPLOY_GPT4O")
+    llm = AzureChatOpenAI(
+        azure_deployment=chat_deploy,
+        api_version=AZURE_API_VERSION,
+        azure_endpoint=endpoint,
+        api_key=api_key,
+        temperature=0,
+        max_retries=5,
+        timeout=60,
+        request_timeout=60,
+    )
     
-    return rag_pipeline.build_pipeline(cache_key)
+    # 검색 전략 선택 (환경 변수 또는 기본값)
+    search_strategy = os.getenv("RAG_SEARCH_STRATEGY", "mmr").lower()
+    
+    if search_strategy == "mmr":
+        # MMR 리트리버 생성 (다양성과 관련성 균형)
+        base_retriever = create_mmr_retriever(
+            vectorstore, 
+            k=int(os.getenv("RAG_K", "5")), 
+            fetch_k=int(os.getenv("RAG_FETCH_K", "20")),
+            lambda_mult=float(os.getenv("RAG_LAMBDA_MULT", "0.7"))
+        )
+        logger.info("[rag] MMR 리트리버 생성 완료 (k=%s, fetch_k=%s, lambda=%s)", 
+                   os.getenv("RAG_K", "5"), os.getenv("RAG_FETCH_K", "20"), os.getenv("RAG_LAMBDA_MULT", "0.7"))
+    elif search_strategy == "similarity":
+        # 유사도 기반 리트리버 생성
+        base_retriever = create_similarity_retriever(
+            vectorstore,
+            k=int(os.getenv("RAG_K", "5")),
+            score_threshold=float(os.getenv("RAG_SCORE_THRESHOLD", "0.7"))
+        )
+        logger.info("[rag] 유사도 리트리버 생성 완료 (k=%s, threshold=%s)", 
+                   os.getenv("RAG_K", "5"), os.getenv("RAG_SCORE_THRESHOLD", "0.7"))
+    else:
+        # 기본 리트리버
+        base_retriever = vectorstore.as_retriever(
+            search_kwargs={"k": int(os.getenv("RAG_K", "5"))}
+        )
+        logger.info("[rag] 기본 리트리버 생성 완료 (k=%s)", os.getenv("RAG_K", "5"))
+    
+    # 컨텍스트 압축 리트리버 생성 (선택적)
+    use_compression = os.getenv("RAG_USE_COMPRESSION", "false").lower() == "true"
+    if use_compression:
+        try:
+            compressed_retriever = create_compressed_retriever(base_retriever, llm)
+            logger.info("[rag] 컨텍스트 압축 리트리버 생성 완료")
+            final_retriever = compressed_retriever
+        except Exception as e:
+            logger.warning("[rag] 컨텍스트 압축 실패, 기본 리트리버 사용: %s", e)
+            final_retriever = base_retriever
+    else:
+        logger.info("[rag] 컨텍스트 압축 비활성화")
+        final_retriever = base_retriever
+    
+    # MultiQueryRetriever로 최종 래핑
+    retriever = MultiQueryRetriever.from_llm(retriever=final_retriever, llm=llm)
+    logger.info("[rag] MultiQueryRetriever 초기화 완료")
+    
+    return retriever
 
 # ==============================================================================
 # 4. 멀티 에이전트 정의 (Multi-Agent Definition)
@@ -654,10 +524,44 @@ def agent_node(state, agent, name):
     error_message = f"Error in {name} Agent: 모든 재시도 실패"
     return {"messages": [HumanMessage(content=error_message, name="error")]}
 
-# 출처 및 인용 관련 설정 (Config 클래스에서 가져옴)
+# 최대 반복 횟수 및 타임아웃 설정
+MAX_ITERATIONS = 10
+TIMEOUT_SECONDS = 300
+
+# 출처 및 인용 관련 설정
+CITATION_FORMAT = """
+출처: [{source_name}] {page_info}
+근거: {evidence_text}
+신뢰도: {confidence_score}
+"""
+
+RESEARCHER_OUTPUT_FORMAT = """
+[수집된 정보]
+{content}
+
+[출처 정보]
+{source_citations}
+
+[신뢰도 평가]
+- 정보 품질: {quality_score}/10
+- 출처 신뢰성: {reliability_score}/10
+- 최신성: {recency_score}/10
+"""
+
+ANALYST_OUTPUT_FORMAT = """
+[분석 결과]
+{analysis}
+
+[근거 및 출처]
+{citations}
+
+[결론]
+{conclusion}
+"""
 
 def extract_source_info(content: str) -> dict:
     """텍스트에서 출처 정보를 추출합니다."""
+    import re  # 함수 시작 부분에서 임포트
     
     source_info = {
         "source_name": "알 수 없음",
@@ -692,7 +596,7 @@ def format_citations(sources: list) -> str:
     
     citations = []
     for i, source in enumerate(sources, 1):
-        citation = Config.CITATION_FORMAT.format(
+        citation = CITATION_FORMAT.format(
             source_name=source.get("source_name", "알 수 없음"),
             page_info=source.get("page_info", ""),
             evidence_text=source.get("evidence_text", "")[:150] + "..." if len(source.get("evidence_text", "")) > 150 else source.get("evidence_text", ""),
@@ -739,6 +643,7 @@ def evaluate_evidence_quality(content: str, sources: list) -> dict:
 
 def extract_preview_sources(content: str) -> list:
     """응답 내용에서 근거 정보를 추출하여 미리보기용으로 반환합니다."""
+    import re
     
     sources = []
     
@@ -799,16 +704,16 @@ def create_supervisor(llm: AzureChatOpenAI, agent_names: List[str]):
         messages = state.get("messages", []) if isinstance(state, dict) else []
         logger.info("[supervisor] 입력 메시지 수=%d", len(messages))
         
-                # 반복 한도 체크
-        if len(messages) > Config.MAX_ITERATIONS:
-            logger.warning("[supervisor] 최대 반복 횟수 도달 (%d), 강제 종료", Config.MAX_ITERATIONS)
+        # 반복 한도 체크
+        if len(messages) > MAX_ITERATIONS:
+            logger.warning("[supervisor] 최대 반복 횟수 도달 (%d), 강제 종료", MAX_ITERATIONS)
             return {"messages": [HumanMessage(content="ROUTE: END", name="supervisor")]}
         
         # 타임아웃 체크 (간단한 구현)
         current_time = time.time()
         if hasattr(supervisor_node, '_start_time'):
-            if current_time - supervisor_node._start_time > Config.TIMEOUT_SECONDS:
-                logger.warning("[supervisor] 타임아웃 도달 (%d초), 강제 종료", Config.TIMEOUT_SECONDS)
+            if current_time - supervisor_node._start_time > TIMEOUT_SECONDS:
+                logger.warning("[supervisor] 타임아웃 도달 (%d초), 강제 종료", TIMEOUT_SECONDS)
                 return {"messages": [HumanMessage(content="ROUTE: END", name="supervisor")]}
         else:
             supervisor_node._start_time = current_time
@@ -967,7 +872,7 @@ def create_graph(llm, retriever):
 
     # 재귀 한도 설정으로 무한 루프 방지
     compiled_graph = workflow.compile()
-    logger.info("[graph] 재귀 한도 설정: %d", Config.MAX_ITERATIONS)
+    logger.info("[graph] 재귀 한도 설정: %d", MAX_ITERATIONS)
     
     return compiled_graph
 
@@ -977,101 +882,20 @@ def create_graph(llm, retriever):
 def main():
     st.set_page_config(page_title="🏦 AI 한국은행 경제 분석팀", page_icon="🤖")
     
-    os.makedirs(Config.DATA_DIR, exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
 
     # 업로더 상태 초기화용 키 설정 (업로드 처리 후 키를 변경해 위젯 상태를 리셋)
     if "uploader_key" not in st.session_state:
         st.session_state.uploader_key = 0
-    
-    # 탭 생성
-    tab1, tab2 = st.tabs(["💬 경제 분석", "⚙️ 환경설정"])
-    
-    with tab1:
-        main_chat_interface()
-    
-    with tab2:
-        settings_interface()
-
-def main_chat_interface():
-    """메인 채팅 인터페이스"""
-    st.title("🏦 AI 한국은행 경제 분석팀 (LangGraph v0.3.x)")
-    st.markdown("멀티 에이전트가 협력하여 질문에 대한 심층 분석을 제공합니다.")
-    
-    # 최적화된 하단 고정 레이아웃을 위한 CSS
-    st.markdown("""
-    <style>
-    /* 메인 컨테이너 하단 여백 */
-    .main .block-container {
-        padding-bottom: 160px !important;
-    }
-    
-    /* 사이드바 조정 */
-    .css-1d391kg {
-        padding-bottom: 160px !important;
-    }
-    
-    /* 고정 하단 영역 */
-    .fixed-bottom-area {
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        background: white !important;
-        border-top: 2px solid #e0e0e0 !important;
-        z-index: 1000 !important;
-        box-shadow: 0 -4px 12px rgba(0,0,0,0.1) !important;
-        padding: 16px !important;
-    }
-    
-    /* 채팅 메시지 영역 */
-    .chat-messages-container {
-        margin-bottom: 160px !important;
-        max-height: calc(100vh - 200px) !important;
-        overflow-y: auto !important;
-    }
-    
-    /* 버튼 영역 스타일링 */
-    .control-buttons {
-        margin-bottom: 12px !important;
-    }
-    
-    /* 채팅 입력 영역 */
-    .chat-input-area {
-        margin-top: 8px !important;
-    }
-    
-    /* 반응형 조정 */
-    @media (max-width: 768px) {
-        .fixed-bottom-area {
-            padding: 12px !important;
-        }
-        .main .block-container {
-            padding-bottom: 180px !important;
-        }
-        .chat-messages-container {
-            margin-bottom: 180px !important;
-        }
-    }
-    
-    /* 스크롤바 스타일링 */
-    .chat-messages-container::-webkit-scrollbar {
-        width: 6px;
-    }
-    .chat-messages-container::-webkit-scrollbar-track {
-        background: #f1f1f1;
-    }
-    .chat-messages-container::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 3px;
-    }
-    .chat-messages-container::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
-    }
-    </style>
-    """, unsafe_allow_html=True)
 
     with st.sidebar:
         st.header("📚 참고 자료 관리")
+        
+        # 웹검색 토글
+        web_search_enabled = st.toggle("🌐 웹검색 활성화", value=True, help="웹에서 최신 정보를 검색합니다")
+        if "web_search_enabled" not in st.session_state:
+            st.session_state.web_search_enabled = True
+        st.session_state.web_search_enabled = web_search_enabled
         
         # 그래프 재구성 유틸리티
         def _rebuild_graph():
@@ -1090,7 +914,7 @@ def main_chat_interface():
         if uploaded_files:
             file_added = False
             for uploaded_file in uploaded_files:
-                file_path = os.path.join(Config.DATA_DIR, uploaded_file.name)
+                file_path = os.path.join(DATA_DIR, uploaded_file.name)
                 with open(file_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                 file_added = True
@@ -1102,7 +926,7 @@ def main_chat_interface():
                 st.rerun()
         st.divider()
         st.subheader("현재 참고 중인 자료")
-        pdf_files_in_data = glob.glob(os.path.join(Config.DATA_DIR, "*.pdf"))
+        pdf_files_in_data = glob.glob(os.path.join(DATA_DIR, "*.pdf"))
         if pdf_files_in_data:
             for f in pdf_files_in_data:
                 st.info(f"📄 {os.path.basename(f)}")
@@ -1110,50 +934,51 @@ def main_chat_interface():
             st.info("업로드된 파일이 없습니다. 기본 데이터로 분석합니다.")
         
         st.divider()
-        st.subheader("📊 분석 로그")
+        st.subheader("💬 대화 관리")
         
-        # 로그 설정
-        col1, col2 = st.columns(2)
-        with col1:
-            log_count = st.selectbox("로그 개수", [5, 10, 15, 20], index=1)
-        with col2:
-            if st.button("🗑️ 로그 클리어"):
-                logger.clear_logs()
-                st.rerun()
+        # 대화 초기화
+        if st.button("🔄 대화 초기화", help="현재 대화를 모두 지웁니다"):
+            st.session_state["messages"] = [{"role": "assistant", "content": "안녕하세요! 저는 경제 분석을 돕는 AI 분석팀입니다. 무엇이 궁금하신가요?"}]
+            st.rerun()
         
-        # 로그 표시 영역
-        recent_logs = logger.get_recent_logs(log_count)
-        if recent_logs:
-            # 로그를 역순으로 표시 (최신 로그가 위에)
-            for log in reversed(recent_logs):
-                # 로그 레벨에 따른 색상 구분
-                if "❌" in log or "🚨" in log:
-                    st.error(log, icon="❌")
-                elif "⚠️" in log:
-                    st.warning(log, icon="⚠️")
-                elif "ℹ️" in log:
-                    st.info(log, icon="ℹ️")
-                else:
-                    st.text(log)
-        else:
-            st.info("아직 로그가 없습니다. 분석을 시작하면 로그가 표시됩니다.")
+        # 대화 내보내기
+        def export_conversation():
+            messages = st.session_state.get("messages", [])
+            if len(messages) > 1:  # 초기 메시지 외에 대화가 있는 경우
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                filename = f"대화내역_{timestamp}.txt"
+                
+                export_content = f"AI 한국은행 경제 분석팀 - 대화 내역\n"
+                export_content += f"생성일시: {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                export_content += f"웹검색 활성화: {'예' if st.session_state.get('web_search_enabled', True) else '아니오'}\n"
+                export_content += f"참고자료: {len(pdf_files_in_data)}개\n"
+                export_content += "=" * 50 + "\n\n"
+                
+                for msg in messages:
+                    role = "사용자" if msg["role"] == "user" else "AI 분석팀"
+                    export_content += f"[{role}]\n{msg['content']}\n\n"
+                
+                # 파일 다운로드
+                st.download_button(
+                    label="📥 대화 내보내기",
+                    data=export_content,
+                    file_name=filename,
+                    mime="text/plain",
+                    help="현재 대화를 텍스트 파일로 다운로드합니다"
+                )
+            else:
+                st.warning("내보낼 대화가 없습니다.")
         
-        st.divider()
-        st.subheader("💡 사용 팁")
-        
-        st.info("""
-        **효율적인 사용법:**
-        - 📥 내보내기: 하단 버튼에서 대화를 파일로 저장
-        - 📊 로그: 실시간 분석 과정을 확인
-        - 🌐 웹검색: 최신 정보 수집 활성화/비활성화
-        - 🔄 초기화: 새로운 대화 시작
-        """)
+        export_conversation()
 
+    st.title("🏦 AI 한국은행 경제 분석팀 (LangGraph v0.3.x)")
+    st.markdown("멀티 에이전트가 협력하여 질문에 대한 심층 분석을 제공합니다.")
+    
     try:
         setup_environment()
         model_factory = AzureModelFactory()
 
-        if ("agent_graph" not in st.session_state) or (st.session_state.get("agent_graph_version") != Config.APP_GRAPH_VERSION):
+        if ("agent_graph" not in st.session_state) or (st.session_state.get("agent_graph_version") != APP_GRAPH_VERSION):
             # 단계별 시각화가 가능한 상태 패널로 초기화 과정을 표시
             try:
                 with st.status("AI 분석팀을 구성하는 중입니다...", expanded=True) as status:
@@ -1167,7 +992,7 @@ def main_chat_interface():
                     # 2) RAG 파이프라인 구축 단계별 표시 (캐시 키 도입으로 반복 방지)
                     if status:
                         status.update(label="📚 RAG 파이프라인 구축: PDF 스캔", state="running")
-                    pdf_files = glob.glob(os.path.join(Config.DATA_DIR, "*.pdf"))
+                    pdf_files = glob.glob(os.path.join(DATA_DIR, "*.pdf"))
                     st.write(f"- PDF 파일 수집: {len(pdf_files)}개 발견")
                     logger.info("[init] PDF 스캔: %d개", len(pdf_files))
 
@@ -1211,7 +1036,7 @@ def main_chat_interface():
                             return f"{os.path.basename(path)}:{int(os.path.getmtime(path))}"
                         except Exception:
                             return os.path.basename(path)
-                    key_src = Config.APP_GRAPH_VERSION + "|" + ",".join(sorted([_file_sig(p) for p in pdf_files]))
+                    key_src = APP_GRAPH_VERSION + "|" + ",".join(sorted([_file_sig(p) for p in pdf_files]))
                     cache_key = hashlib.sha256(key_src.encode()).hexdigest()
 
                     if status:
@@ -1224,7 +1049,7 @@ def main_chat_interface():
                     if status:
                         status.update(label="🕸️ LangGraph 그래프 컴파일", state="running")
                     st.session_state.agent_graph = create_graph(model_factory.get_chat_model(), retriever)
-                    st.session_state.agent_graph_version = Config.APP_GRAPH_VERSION
+                    st.session_state.agent_graph_version = APP_GRAPH_VERSION
                     st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 저는 경제 분석을 돕는 AI 분석팀입니다. 무엇이 궁금하신가요?"}]
                     if status:
                         status.update(label="✅ 초기화 완료", state="complete")
@@ -1234,122 +1059,25 @@ def main_chat_interface():
                 st.error(f"초기화 중 오류가 발생했습니다: {e}")
                 return
 
-        # 채팅 메시지 영역을 스크롤 가능한 컨테이너로 감싸기
-        with st.container():
-            st.markdown('<div class="chat-messages-container">', unsafe_allow_html=True)
-            messages = st.session_state.get("messages", [])
-            for msg in messages:
-                with st.chat_message(msg["role"]):
-                    st.write(msg["content"])
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        # 고정된 하단 영역
-        st.markdown('<div class="fixed-bottom-area">', unsafe_allow_html=True)
-        
-        # 컨트롤 버튼 영역 (상단)
-        st.markdown('<div class="control-buttons">', unsafe_allow_html=True)
-        col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-        
-        with col1:
-            if st.button("🔄 초기화", help="현재 대화를 모두 지웁니다", type="secondary", use_container_width=True):
-                st.session_state["messages"] = [{"role": "assistant", "content": "안녕하세요! 저는 경제 분석을 돕는 AI 분석팀입니다. 무엇이 궁금하신가요?"}]
-                logger.clear_logs()  # 로그도 함께 클리어
-                st.rerun()
-        
-        with col2:
-            web_search_enabled = st.toggle("🌐 웹검색", value=True, help="웹에서 최신 정보를 검색합니다")
-            if "web_search_enabled" not in st.session_state:
-                st.session_state.web_search_enabled = True
-            st.session_state.web_search_enabled = web_search_enabled
-        
-        with col3:
-            # 로그 표시 토글
-            log_button_text = "📊 로그 끄기" if st.session_state.get("show_logs", False) else "📊 로그 켜기"
-            log_button_type = "primary" if st.session_state.get("show_logs", False) else "secondary"
-            if st.button(log_button_text, help="실시간 분석 로그를 표시합니다", type=log_button_type, use_container_width=True):
-                st.session_state.show_logs = not st.session_state.get("show_logs", False)
-                st.rerun()
-        
-        with col4:
-            # 대화 내보내기 버튼
-            if st.button("📥 내보내기", help="현재 대화를 파일로 내보냅니다", type="secondary", use_container_width=True):
-                # 대화 내보내기 로직
-                messages = st.session_state.get("messages", [])
-                if len(messages) > 1:
-                    timestamp = time.strftime("%Y%m%d_%H%M%S")
-                    filename = f"대화내역_{timestamp}.txt"
-                    
-                    export_content = f"AI 한국은행 경제 분석팀 - 대화 내역\n"
-                    export_content += f"생성일시: {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                    export_content += f"웹검색 활성화: {'예' if st.session_state.get('web_search_enabled', True) else '아니오'}\n"
-                    export_content += "=" * 50 + "\n\n"
-                    
-                    for msg in messages:
-                        role = "사용자" if msg["role"] == "user" else "AI 분석팀"
-                        export_content += f"[{role}]\n{msg['content']}\n\n"
-                    
-                    st.download_button(
-                        label="📥 다운로드",
-                        data=export_content,
-                        file_name=filename,
-                        mime="text/plain",
-                        help="현재 대화를 텍스트 파일로 다운로드합니다"
-                    )
-                else:
-                    st.warning("내보낼 대화가 없습니다.")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        # 채팅 입력 영역 (하단)
-        st.markdown('<div class="chat-input-area">', unsafe_allow_html=True)
-        prompt = st.chat_input("기준금리, 경제 전망 등에 대해 질문하세요.", key="main_chat_input")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+        messages = st.session_state.get("messages", [])
+        for msg in messages:
+            with st.chat_message(msg["role"]):
+                st.write(msg["content"])
 
-        if prompt:
+        if prompt := st.chat_input("기준금리, 경제 전망 등에 대해 질문하세요."):
             if "messages" not in st.session_state:
                 st.session_state["messages"] = []
             st.session_state["messages"].append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.write(prompt)
             
-            # 자동 스크롤을 위한 JavaScript 추가
-            st.markdown("""
-            <script>
-                setTimeout(function() {
-                    window.scrollTo(0, document.body.scrollHeight);
-                }, 100);
-            </script>
-            """, unsafe_allow_html=True)
-            
             with st.chat_message("assistant"):
                 try:
-                    # 실시간 로그 업데이트를 위한 컨테이너 (로그 표시가 활성화된 경우에만)
-                    log_update_container = st.container()
-                    
                     with st.status("분석팀이 작업을 시작합니다...") as status:
                         final_response = ""
                         accumulated_messages = []
-                        for chunk in st.session_state.agent_graph.stream({"messages": [HumanMessage(content=prompt)]}, config={"recursion_limit": Config.MAX_ITERATIONS}, stream_mode="updates"):
+                        for chunk in st.session_state.agent_graph.stream({"messages": [HumanMessage(content=prompt)]}, config={"recursion_limit": MAX_ITERATIONS}, stream_mode="updates"):
                             logger.debug("[run] chunk=%s", chunk)
-                            
-                            # 실시간 로그 업데이트 (로그 표시가 활성화된 경우에만)
-                            if st.session_state.get("show_logs", False):
-                                with log_update_container:
-                                    recent_logs = logger.get_recent_logs(3)  # 최근 3개 로그만 표시
-                                    if recent_logs:
-                                        st.markdown("**📊 실시간 분석 로그:**")
-                                        # 로그를 역순으로 표시 (최신 로그가 위에)
-                                        for log in reversed(recent_logs):
-                                            if "❌" in log or "🚨" in log:
-                                                st.error(log, icon="❌")
-                                            elif "⚠️" in log:
-                                                st.warning(log, icon="⚠️")
-                                            elif "ℹ️" in log:
-                                                st.info(log, icon="ℹ️")
-                                            else:
-                                                st.text(log)
                             
                             # Supervisor 단계 처리
                             if "supervisor" in chunk:
@@ -1433,15 +1161,6 @@ def main_chat_interface():
                                 for i, source in enumerate(preview_sources[:3], 1):
                                     st.markdown(f"**{i}.** {source}")
                         
-                        # 분석 완료 후 자동 스크롤
-                        st.markdown("""
-                        <script>
-                            setTimeout(function() {
-                                window.scrollTo(0, document.body.scrollHeight);
-                            }, 500);
-                        </script>
-                        """, unsafe_allow_html=True)
-                        
                         if status:
                             status.update(label="✅ 분석 완료!", state="complete")
                 except Exception as e:
@@ -1457,71 +1176,6 @@ def main_chat_interface():
     except Exception as e:
         logger.exception("[app] 전역 오류")
         st.error(f"오류가 발생했습니다: {str(e)}")
-
-def settings_interface():
-    """환경설정 인터페이스"""
-    st.title("⚙️ 환경설정")
-    st.markdown("애플리케이션의 설정을 관리합니다.")
-    
-    # Config 클래스의 설정들을 표시하고 수정할 수 있도록 구성
-    st.subheader("🔧 기본 설정")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Azure API 버전", Config.AZURE_API_VERSION)
-        st.metric("데이터 디렉토리", Config.DATA_DIR)
-        st.metric("앱 그래프 버전", Config.APP_GRAPH_VERSION)
-    
-    with col2:
-        st.metric("최대 반복 횟수", Config.MAX_ITERATIONS)
-        st.metric("타임아웃 (초)", Config.TIMEOUT_SECONDS)
-    
-    st.subheader("📚 RAG 설정")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("검색 전략", Config.RAG_SEARCH_STRATEGY)
-        st.metric("검색 결과 수 (K)", Config.RAG_K)
-        st.metric("가져올 결과 수 (Fetch K)", Config.RAG_FETCH_K)
-    
-    with col2:
-        st.metric("MMR 람다", Config.RAG_LAMBDA_MULT)
-        st.metric("점수 임계값", Config.RAG_SCORE_THRESHOLD)
-        st.metric("압축 사용", "예" if Config.RAG_USE_COMPRESSION else "아니오")
-    
-    st.subheader("📝 출력 형식")
-    
-    with st.expander("인용 형식", expanded=False):
-        st.code(Config.CITATION_FORMAT, language="text")
-    
-    with st.expander("Researcher 출력 형식", expanded=False):
-        st.code(Config.RESEARCHER_OUTPUT_FORMAT, language="text")
-    
-    with st.expander("Analyst 출력 형식", expanded=False):
-        st.code(Config.ANALYST_OUTPUT_FORMAT, language="text")
-    
-    st.subheader("🔍 환경 변수")
-    
-    # 환경 변수 표시
-    env_vars = {
-        "AOAI_ENDPOINT": os.getenv("AOAI_ENDPOINT", "설정되지 않음"),
-        "AOAI_API_KEY": os.getenv("AOAI_API_KEY", "설정되지 않음")[:10] + "..." if os.getenv("AOAI_API_KEY") else "설정되지 않음",
-        "AOAI_DEPLOY_GPT4O": os.getenv("AOAI_DEPLOY_GPT4O", "설정되지 않음"),
-        "AOAI_DEPLOY_EMBED_3_LARGE": os.getenv("AOAI_DEPLOY_EMBED_3_LARGE", "설정되지 않음"),
-        "AZURE_API_VERSION": os.getenv("AZURE_API_VERSION", "설정되지 않음"),
-        "LOG_LEVEL": os.getenv("LOG_LEVEL", "INFO"),
-        "RAG_SEARCH_STRATEGY": os.getenv("RAG_SEARCH_STRATEGY", "mmr"),
-        "RAG_K": os.getenv("RAG_K", "5"),
-        "RAG_FETCH_K": os.getenv("RAG_FETCH_K", "20"),
-        "RAG_LAMBDA_MULT": os.getenv("RAG_LAMBDA_MULT", "0.7"),
-        "RAG_SCORE_THRESHOLD": os.getenv("RAG_SCORE_THRESHOLD", "0.7"),
-        "RAG_USE_COMPRESSION": os.getenv("RAG_USE_COMPRESSION", "false"),
-    }
-    
-    for key, value in env_vars.items():
-        st.text(f"{key}: {value}")
-    
-    st.info("💡 환경 변수를 변경하려면 .env 파일을 수정하고 애플리케이션을 재시작하세요.")
 
 # ==============================================================================
 # 7. 애플리케이션 실행 (Application Execution)

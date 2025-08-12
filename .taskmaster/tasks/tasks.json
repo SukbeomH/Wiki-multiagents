@@ -174,7 +174,7 @@
             "title": "질의 처리 및 멀티 에이전트 라우팅 검증",
             "description": "질문 입력 후 Supervisor/Researcher/Analyst 단계가 정상적으로 동작하는지 확인합니다.",
             "details": "- 예시 질문 입력 → st.status 단계별 레이블 갱신 확인\n- researcher 도구 호출(bok_document_search, web_search) 정상 동작\n- analyst 결과 생성 및 Supervisor 최종 응답(Final Answer) 수신\n- 수용 기준: 최종 응답이 사용자 채팅에 표시\n<info added on 2025-08-11T05:12:03.901Z>\n[진행 체크리스트]\n1) 예시 질문 입력: \"최근 기준금리 동결의 영향 분석\" 등\n2) 상태 표시(st.status) 단계 확인: Supervisor → Researcher → Analyst 순으로 레이블 변경\n3) Researcher 도구 호출 확인: bok_document_search(업로드 PDF 기반), web_search(ddgs)\n4) 오류 발생 시: error 메시지 수신 → Supervisor가 재할당/종료 판단하는지 확인\n5) 최종 응답: Supervisor 메시지에서 \"Final Answer:\" 이후 내용이 사용자 채팅에 표시되는지 확인\n\n[수용 기준]\n- 각 단계 레이블 정상 업데이트\n- 최소 한 번 이상 Researcher/Analyst 실행 흔적 확인\n- 최종 답변 렌더링 확인(빈 문자열 아님)\n</info added on 2025-08-11T05:12:03.901Z>\n<info added on 2025-08-11T06:52:55.731Z>\n[진행 업데이트 - 최종 응답 수집 로직 보완]\n\n**문제 해결 진행 상황:**\n- 400 에러 해결: Supervisor를 tool_calls 없는 라우팅 전용으로 전환 완료\n- 그래프 분기 개선: Analyst 노드를 END로 직접 연결하여 워크플로우 안정화\n- 새로운 이슈 발견: UI에서 최종 응답이 비어 있음 (길이=0)\n\n**원인 분석:**\n- 현재 스트리밍 로직이 supervisor 메시지에서만 최종 답변 수집\n- Analyst가 바로 END로 종료되어 supervisor의 비툴 메시지가 없으면 final_response가 공백\n\n**해결 방안 (우선순위별):**\n1) 스트리밍 루프에 analyst 노드 메시지 수집 분기 추가\n   - 조건: if \"analyst\" in chunk and chunk[\"analyst\"].get(\"messages\")\n   - 동작: final_response = chunk[\"analyst\"][\"messages\"][-1].content\n2) Supervisor 프롬프트 규칙 강화로 'Final Answer:' 형식 보장\n\n**현재 상태:** 기능 동작은 확인되었으나 UI 최종 응답 표시 로직 보완 필요\n</info added on 2025-08-11T06:52:55.731Z>",
-            "status": "in-progress",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 11
           },
@@ -263,7 +263,7 @@
             "title": "Supervisor 라우팅 엄격화 및 종료 가드",
             "description": "ROUTE/Final Answer 외 출력 금지. 불명확 응답 기본 END. 시스템 프롬프트 강화 및 route_action 기본값 보수화.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 13
           },
@@ -272,7 +272,7 @@
             "title": "루프 차단/재귀한도·타임아웃·재시도 설정",
             "description": "AzureChatOpenAI max_retries, timeout 설정. Graph recursion_limit 보수적 상향. 무한 루프 방지.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 13
           },
@@ -281,7 +281,7 @@
             "title": "RAG 인덱스 영속화 및 검색 튜닝",
             "description": "FAISS save/load로 영속화. as_retriever(search_type=\"mmr\", k/fetch_k 조정). ContextualCompressionRetriever 검토.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 13
           },
@@ -290,7 +290,7 @@
             "title": "결과 신뢰성: 출처/인용 강제 및 재조회",
             "description": "Researcher 출력에 출처(문서/페이지/URL) 포맷 강제. 근거 부족 시 k↑ 재조회. Analyst 인용 포함.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 13
           },
@@ -299,7 +299,7 @@
             "title": "UI/UX: 웹검색 토글·근거 미리보기·대화 관리",
             "description": "사이드바 토글로 ddgs on/off. 상위 스니펫 3개 근거 미리보기. 대화 초기화/결과 내보내기 버튼.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 13
           },
@@ -313,11 +313,82 @@
             "parentTaskId": 13
           }
         ]
+      },
+      {
+        "id": 14,
+        "title": "Streamlit 앱 구조 표준화 및 레이아웃 리팩토링",
+        "description": "Streamlit 앱의 구조를 개선하고, 레이아웃을 표준화하며, 하드코딩된 CSS를 제거하여 유지보수성과 확장성을 향상시킵니다.",
+        "details": "**1. 프로젝트 구조 표준화:**\n    *   `pages/` 디렉토리에 각 페이지별 Streamlit 앱 분리 (예: `pages/1_📊_Dashboard.py`, `pages/2_📄_Document_Analysis.py`)\n    *   `components/` 디렉토리에 재사용 가능한 UI 컴포넌트(예: `components/sidebar.py`, `components/chat_display.py`) 생성\n    *   `core/` 또는 `utils/` 디렉토리에 핵심 로직 및 유틸리티 함수 분리 (예: `core/rag.py`, `utils/helpers.py`)\n    *   `app.py`는 메인 진입점으로, 멀티페이지 앱 설정을 포함하거나 간단한 라우팅 역할만 수행하도록 변경\n\n**2. 레이아웃 및 스타일 표준화:**\n    *   하드코딩된 CSS 제거: Streamlit의 내장 테마 및 스타일링 기능 활용 (예: `st.markdown(\"<style>...</style>\", unsafe_allow_html=True)` 대신 `st.columns`, `st.container`, `st.expander` 등 활용)\n    *   `st.container`를 사용하여 논리적 섹션 그룹화 및 레이아웃 관리\n    *   사이드바는 `st.sidebar`를 사용하여 표준화하고, 재사용 가능한 컴포넌트(`components/sidebar.py`)로 분리하여 관리\n\n**3. 상태 관리 개선:**\n    *   `st.session_state`를 사용하여 상태 관리를 중앙 집중화하고 명확하게 정의\n    *   복잡한 상태 로직은 별도 함수 또는 클래스로 분리하여 가독성 향상\n\n**4. 설정 파일 표준화:**\n    *   `.streamlit/config.toml` 파일을 사용하여 앱의 전역 설정(테마, 페이지 설정 등) 관리\n    *   환경 변수는 `.env` 파일을 통해 관리하고, `python-dotenv` 라이브러리로 로드\n\n**5. 멀티페이지 구조 구현:**\n    *   Streamlit의 멀티페이지 기능 활용하여 `pages/` 디렉토리에 각 페이지 구성\n    *   페이지 간 네비게이션을 위한 사이드바 메뉴 표준화\n\n**6. 컴포넌트 재사용성 확보:**\n    *   반복적으로 사용되는 UI 요소(예: 차트, 테이블, 사용자 정의 위젯)는 `components/` 디렉토리에 별도 파일로 분리하여 재사용\n\n**기술적 고려사항:**\n*   Streamlit 최신 버전의 컴포넌트 및 API 활용 (예: `st.chat_input`, `st.chat_message`)\n*   코드 포맷터(예: Black, Ruff) 및 린터(예: Ruff, Flake8)를 사용하여 코드 스타일 일관성 유지\n*   Streamlit Best Practices 문서 참조: [https://docs.streamlit.io/library/get-started/architecture](https://docs.streamlit.io/library/get-started/architecture), [https://docs.streamlit.io/library/advanced-features/session-state](https://docs.streamlit.io/library/advanced-features/session-state), [https://docs.streamlit.io/library/api-reference/layout](https://docs.streamlit.io/library/api-reference/layout)\n\n**참고:** Task 9에서 구현된 `app.py`의 기본 구조를 기반으로 리팩토링을 진행합니다. Task 10, 11, 13에서 진행된 시스템 통합 및 안정화 작업과 연계하여 구조를 개선합니다.",
+        "testStrategy": "1. **구조 검증:**\n    *   프로젝트 디렉토리 구조가 `pages/`, `components/`, `core/` (또는 `utils/`) 패턴을 따르는지 확인합니다.\n    *   `app.py`가 메인 진입점 역할을 하거나 멀티페이지 설정을 올바르게 포함하는지 확인합니다.\n    *   `components/` 디렉토리에 분리된 UI 컴포넌트들이 정상적으로 import 및 렌더링되는지 확인합니다.\n\n2. **레이아웃 및 스타일 검증:**\n    *   하드코딩된 CSS가 제거되고 Streamlit 네이티브 레이아웃 컴포넌트(`st.container`, `st.columns` 등)로 대체되었는지 확인합니다.\n    *   사이드바가 `st.sidebar`를 통해 표준화되었는지, 재사용 가능한 컴포넌트로 분리되었는지 확인합니다.\n    *   앱의 전체적인 레이아웃이 의도한 대로 구성되었는지 시각적으로 검증합니다.\n\n3. **상태 관리 검증:**\n    *   `st.session_state`가 명확하게 정의되고 사용되는지 확인합니다.\n    *   상태 관리 로직이 별도의 함수나 클래스로 분리되어 코드 가독성이 향상되었는지 확인합니다.\n\n4. **설정 파일 검증:**\n    *   `.streamlit/config.toml` 파일이 존재하고 기본적인 설정이 포함되어 있는지 확인합니다.\n    *   `.env` 파일이 올바르게 로드되고 환경 변수가 애플리케이션에서 사용되는지 확인합니다.\n\n5. **멀티페이지 기능 검증:**\n    *   Streamlit 앱 실행 시 사이드바에 페이지 목록이 올바르게 표시되는지 확인합니다.\n    *   각 페이지 링크를 클릭했을 때 해당 페이지로 정상적으로 이동하는지 확인합니다.\n\n6. **컴포넌트 재사용성 검증:**\n    *   `components/` 디렉토리에 정의된 컴포넌트가 여러 페이지에서 성공적으로 재사용되는지 확인합니다.\n\n7. **회귀 테스트:**\n    *   리팩토링 이전의 주요 기능(파일 업로드, RAG 파이프라인 실행, 채팅 인터페이스 등)이 변경 후에도 정상적으로 작동하는지 확인합니다. (Task 9, 10, 11, 13의 테스트 전략 참조)",
+        "status": "pending",
+        "dependencies": [
+          9,
+          10,
+          11,
+          13
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "프로젝트 디렉토리 구조 표준화",
+            "description": "Streamlit 앱의 각 페이지를 `pages/` 디렉토리에 분리하고, 재사용 가능한 UI 컴포넌트를 `components/`에, 핵심 로직과 유틸리티 함수를 `core/` 또는 `utils/`에 분리하여 프로젝트 구조를 체계화합니다.",
+            "dependencies": [],
+            "details": "`pages/`에 페이지별 파일 생성 (예: `1_📊_Dashboard.py`), `components/`에 UI 컴포넌트 파일 생성 (예: `sidebar.py`), `core/` 또는 `utils/`에 비즈니스 로직 및 헬퍼 함수 분리. `app.py`는 메인 진입점으로 멀티페이지 설정 또는 라우팅 역할만 수행하도록 변경합니다.",
+            "status": "pending",
+            "testStrategy": "프로젝트 구조가 표준화된 디렉토리 패턴을 따르는지 확인하고, 각 컴포넌트 및 페이지가 정상적으로 import 및 렌더링되는지 테스트합니다."
+          },
+          {
+            "id": 2,
+            "title": "레이아웃 및 스타일 표준화",
+            "description": "하드코딩된 CSS를 제거하고 Streamlit 내장 레이아웃 및 스타일링 기능을 활용하여 앱의 UI를 표준화하고 유지보수성을 높입니다.",
+            "dependencies": [
+              "14.1"
+            ],
+            "details": "`st.markdown` 내 하드코딩 CSS 제거, 대신 `st.container`, `st.columns`, `st.expander` 등 Streamlit 네이티브 레이아웃 컴포넌트 사용. 사이드바는 `st.sidebar`로 표준화하고 재사용 가능한 컴포넌트로 분리합니다.",
+            "status": "pending",
+            "testStrategy": "하드코딩 CSS가 제거되었는지 확인하고, Streamlit 내장 레이아웃 컴포넌트가 올바르게 적용되어 UI가 일관되고 논리적으로 구성되었는지 검증합니다."
+          },
+          {
+            "id": 3,
+            "title": "상태 관리 개선 및 중앙 집중화",
+            "description": "`st.session_state`를 활용하여 앱 상태 관리를 명확하고 일관되게 구현하며, 복잡한 상태 로직은 별도의 함수나 클래스로 분리하여 가독성을 향상시킵니다.",
+            "dependencies": [
+              "14.1"
+            ],
+            "details": "상태 관련 변수 및 로직을 `st.session_state`에 통합하고, 상태 변경 및 초기화 로직을 별도 모듈 또는 클래스에 분리하여 관리합니다.",
+            "status": "pending",
+            "testStrategy": "상태 변경이 의도대로 반영되는지, 복잡한 상태 로직이 별도 함수/클래스로 분리되어 유지보수가 용이한지 테스트합니다."
+          },
+          {
+            "id": 4,
+            "title": "설정 파일 및 환경 변수 표준화",
+            "description": "앱 전역 설정을 `.streamlit/config.toml`에 통합하고, 환경 변수는 `.env` 파일과 `python-dotenv` 라이브러리를 사용해 관리하여 설정 관리를 일원화합니다.",
+            "dependencies": [
+              "14.1"
+            ],
+            "details": "테마, 페이지 설정 등 전역 설정을 `.streamlit/config.toml`에 정의하고, API 키 등 민감 정보는 `.env` 파일에 저장 후 `python-dotenv`로 로드합니다.",
+            "status": "pending",
+            "testStrategy": "설정 파일과 환경 변수 로드가 정상적으로 작동하는지, 설정 변경 시 앱에 올바르게 반영되는지 검증합니다."
+          },
+          {
+            "id": 5,
+            "title": "멀티페이지 구조 구현 및 컴포넌트 재사용성 확보",
+            "description": "Streamlit 멀티페이지 기능을 활용해 `pages/` 디렉토리에 각 페이지를 구성하고, 반복 사용되는 UI 요소를 `components/`에 분리하여 재사용성을 높입니다.",
+            "dependencies": [
+              "14.1",
+              "14.2"
+            ],
+            "details": "각 페이지를 독립 파일로 구성하고, 사이드바 메뉴를 표준화하여 페이지 간 네비게이션을 구현합니다. 차트, 테이블, 사용자 정의 위젯 등 반복 UI는 컴포넌트로 분리합니다.",
+            "status": "pending",
+            "testStrategy": "멀티페이지 네비게이션이 원활히 작동하는지, 컴포넌트가 재사용되어 일관된 UI를 제공하는지 테스트합니다."
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-08-11T04:36:34.710Z",
-      "updated": "2025-08-11T07:11:42.739Z",
+      "updated": "2025-08-12T02:03:10.910Z",
       "description": "Tasks for master context"
     }
   }
