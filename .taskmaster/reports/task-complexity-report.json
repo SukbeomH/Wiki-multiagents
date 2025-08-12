@@ -1,0 +1,45 @@
+{
+	"meta": {
+		"generatedAt": "2025-08-12T02:05:59.064Z",
+		"tasksAnalyzed": 4,
+		"totalTasks": 14,
+		"analysisCount": 4,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": true
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 11,
+			"taskTitle": "실제 동작 검증(E2E) 테스트 및 문서화",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "각 검증 단계별 상세 테스트 케이스 작성 및 자동화 방안, 예외 시나리오별 대응 절차, 로그 및 스크린샷 수집 자동화, README 문서화 템플릿 개발을 포함한 세부 작업을 정의하세요.",
+			"reasoning": "통합 시스템의 실제 환경 검증, 다양한 기능(환경설정, 앱 실행, 파일 업로드, 멀티 에이전트 라우팅, 예외 처리)과 문서화까지 포괄하는 복합적 작업으로, 여러 단계와 예외 상황을 체계적으로 검증해야 하므로 높은 난이도를 가짐. 이미 6개의 세부 작업으로 나누어져 있어 적절한 분할 상태임."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "안정성/성능/로깅 개선 리팩터링",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "캐시 키 생성 로직 개선, 파이프라인 시그니처 단순화, 툴 호출 인자 파싱 강화, 불필요 임포트 정리, 로깅 레벨 토글 추가 등 각 개선 항목별 상세 구현 및 테스트 계획을 수립하세요.",
+			"reasoning": "코드 리팩터링과 성능 및 안정성 개선 작업으로, 기존 기능을 유지하면서 코드 품질과 로깅 기능을 향상시키는 중간 난이도 작업. 이미 4개의 세부 작업으로 구분되어 있어 적절한 분할임."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "운영 안정화 및 품질 개선 리팩터링",
+			"complexityScore": 9,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "라우팅 엄격화, 루프 차단, 결과 신뢰성 강화, RAG 인덱스 영속화, UI 개선, 로깅 강화, 문서 및 테스트 추가 등 각 영역별 세부 구현 및 검증 절차를 상세히 정의하세요.",
+			"reasoning": "시스템 전반에 걸친 안정성, 품질, 성능, UI, 로깅, 문서화 등 다방면의 복합적 리팩터링으로 매우 높은 난이도를 가짐. 7개의 세부 작업으로 이미 세분화되어 있어 적절함."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "Streamlit 앱 구조 표준화 및 레이아웃 리팩토링",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "프로젝트 구조 표준화, 레이아웃 및 스타일 표준화, 상태 관리 개선, 설정 파일 표준화, 멀티페이지 및 컴포넌트 재사용성 확보 등 각 영역별 구체적 리팩터링 계획과 테스트 케이스를 작성하세요.",
+			"reasoning": "UI/UX 및 코드 구조 개선 작업으로, 유지보수성과 확장성을 높이기 위한 중상급 난이도 작업. 5개의 세부 작업으로 적절히 분할되어 있음."
+		}
+	]
+}
