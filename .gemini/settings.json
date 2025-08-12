@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "browsermcp": {
+      "command": "npx",
+      "args": [
+        "@browsermcp/mcp"
+      ],
+      "env": {}
+    },
+    "task-master-ai": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "--package=task-master-ai",
+        "task-master-ai"
+      ],
+      "env": {
+        "TEMPERATURE": 0.4,
+        "OPENROUTER_API_KEY": "$OPENROUTER_API_KEY"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "mcp-reasoner": {
+      "command": "node",
+      "args": [
+        "/Users/sukbeom/Desktop/jan/mcp/mcp-reasoner/dist/index.js"
+      ]
+    }
+  }
+}

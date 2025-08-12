@@ -1,6 +1,6 @@
 """
-리팩토링된 메인 Streamlit 앱
-하드코딩된 CSS를 제거하고 Streamlit 네이티브 컴포넌트를 사용
+AI 한국은행 경제 분석팀 - 메인 Streamlit 앱
+Streamlit 네이티브 컴포넌트 우선 사용으로 안정적이고 일관된 UI 제공
 """
 import os
 import hashlib
@@ -22,7 +22,6 @@ from utils import setup_environment, EnvironmentValidator
 from components.sidebar import render_sidebar
 from components.chat_interface import (
     render_chat_interface, 
-    render_analysis_status, 
     render_evidence_preview
 )
 
@@ -384,6 +383,8 @@ def main():
         initial_sidebar_state="expanded"
     )
     
+    # Streamlit 네이티브 컴포넌트 사용
+    
     # 데이터 디렉토리 생성
     os.makedirs(Config.DATA_DIR, exist_ok=True)
 
@@ -404,17 +405,24 @@ def main_chat_interface():
         # 사이드바 렌더링
         uploaded_files = render_sidebar()
 
+        # 헤더 렌더링
+        st.header("🏦 AI 한국은행 경제 분석팀")
+        st.caption("멀티 에이전트가 협력하여 질문에 대한 심층 분석을 제공합니다.")
+
         # 그래프 초기화
         if not StateManager.is_agent_graph_valid():
-            with st.status("AI 분석팀을 구성하는 중입니다...", expanded=True) as status:
+            # 초기화 과정을 채팅 영역에 통합
+            with st.chat_message("assistant"):
+                st.info("🔄 **AI 분석팀을 구성하는 중입니다...**")
+                
                 # LLM 초기화
-                status.update(label="🧠 LLM 초기화", state="running")
+                st.write("🧠 **LLM 초기화 중...**")
                 llm = model_factory.get_chat_model()
-                st.write("- AzureChatOpenAI 인스턴스 생성 완료")
+                st.write("✅ AzureChatOpenAI 인스턴스 생성 완료")
                 logger.info("[init] LLM 초기화 완료")
 
                 # RAG 파이프라인 구축
-                status.update(label="📚 RAG 파이프라인 구축", state="running")
+                st.write("📚 **RAG 파이프라인 구축 중...**")
                 import glob
                 pdf_files = glob.glob(os.path.join(Config.DATA_DIR, "*.pdf"))
                 
@@ -429,19 +437,22 @@ def main_chat_interface():
                 cache_key = hashlib.sha256(key_src.encode()).hexdigest()
                 
                 retriever = build_rag_pipeline(cache_key)
-                st.write("- RAG 리트리버 준비 완료")
+                st.write("✅ RAG 리트리버 준비 완료")
                 logger.info("[init] RAG 리트리버 준비 완료")
 
                 # 그래프 생성
-                status.update(label="🕸️ LangGraph 그래프 컴파일", state="running")
+                st.write("🕸️ **LangGraph 그래프 컴파일 중...**")
                 graph = create_graph(model_factory.get_chat_model(), retriever)
                 StateManager.set_agent_graph(graph, Config.APP_GRAPH_VERSION)
                 
-                status.update(label="✅ 초기화 완료", state="complete")
+                st.success("✅ **초기화 완료!** 이제 질문하실 수 있습니다.")
                 logger.info("[init] 그래프 컴파일 완료")
 
+        # 구분선 렌더링
+        st.divider()
+        
         # 채팅 인터페이스 렌더링
-        prompt, web_search_enabled = render_chat_interface()
+        prompt = render_chat_interface()
 
         if prompt:
             # 사용자 메시지 추가
@@ -452,25 +463,24 @@ def main_chat_interface():
             
             with st.chat_message("assistant"):
                 try:
-                    # 실시간 로그 업데이트
-                    render_analysis_status()
+                    # 분석 시작 메시지
+                    st.info("🔄 **분석팀이 작업을 시작합니다...**")
                     
-                    with st.status("분석팀이 작업을 시작합니다...") as status:
-                        final_response = ""
-                        accumulated_messages = []
+                    final_response = ""
+                    accumulated_messages = []
+                    
+                    for chunk in StateManager.get_agent_graph().stream(
+                        {"messages": [HumanMessage(content=prompt)]}, 
+                        config={"recursion_limit": Config.MAX_ITERATIONS}, 
+                        stream_mode="updates"
+                    ):
+                        logger.debug("[run] chunk=%s", chunk)
                         
-                        for chunk in StateManager.get_agent_graph().stream(
-                            {"messages": [HumanMessage(content=prompt)]}, 
-                            config={"recursion_limit": Config.MAX_ITERATIONS}, 
-                            stream_mode="updates"
-                        ):
-                            logger.debug("[run] chunk=%s", chunk)
-                            
-                            # Supervisor 단계 처리
-                            if "supervisor" in chunk:
-                                status.update(label="🧠 Supervisor가 다음 단계를 결정 중입니다...")
-                                logger.info("[run] supervisor 단계")
-                                if supervisor_messages := chunk["supervisor"].get("messages"):
+                        # Supervisor 단계 처리
+                        if "supervisor" in chunk:
+                            st.write("🧠 **Supervisor가 다음 단계를 결정 중입니다...**")
+                            logger.info("[run] supervisor 단계")
+                            if supervisor_messages := chunk["supervisor"].get("messages"):
                                     last_supervisor_msg = supervisor_messages[-1]
                                     content = getattr(last_supervisor_msg, "content", "").strip()
                                     if content.startswith("Final Answer:"):
@@ -493,7 +503,7 @@ def main_chat_interface():
                             
                             # Researcher 단계 처리
                             if "researcher" in chunk:
-                                status.update(label="🔍 Researcher가 정보를 수집하고 있습니다...")
+                                st.write("🔍 **Researcher가 정보를 수집하고 있습니다...**")
                                 logger.info("[run] researcher 단계")
                                 if researcher_messages := chunk["researcher"].get("messages"):
                                     content = getattr(researcher_messages[-1], "content", "").strip()
@@ -512,7 +522,7 @@ def main_chat_interface():
                             
                             # Analyst 단계 처리
                             if "analyst" in chunk:
-                                status.update(label="✍️ Analyst가 데이터를 분석하고 보고서를 작성 중입니다...")
+                                st.write("✍️ **Analyst가 데이터를 분석하고 보고서를 작성 중입니다...**")
                                 logger.info("[run] analyst 단계")
                                 if analyst_messages := chunk["analyst"].get("messages"):
                                     logger.info("[run] Analyst 메시지 수: %d", len(analyst_messages))
@@ -612,7 +622,8 @@ def main_chat_interface():
                         # 근거 미리보기 표시
                         render_evidence_preview(final_response)
                         
-                        status.update(label="✅ 분석 완료!", state="complete")
+                        # 분석 완료 메시지
+                        st.success("✅ 분석 완료!")
                         
                 except Exception as e:
                     logger.exception("[run] 상태 업데이트 중 오류")

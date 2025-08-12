@@ -2,10 +2,10 @@
 웹 검색 도구 모듈
 """
 import time
-import streamlit as st
 from typing import List, Dict, Any
 from ddgs import DDGS
 from core.logger import logger
+from core.state_manager import StateManager
 
 
 class WebSearchTool:
@@ -21,7 +21,7 @@ class WebSearchTool:
         재시도 로직과 폴백 메커니즘을 포함합니다.
         """
         # 웹검색 토글 확인
-        if not st.session_state.get("web_search_enabled", True):
+        if not StateManager.get_web_search_enabled():
             return "웹검색이 비활성화되어 있습니다. 사이드바에서 웹검색을 활성화하세요."
         
         retry_delay = self.initial_retry_delay

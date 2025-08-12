@@ -4,6 +4,7 @@
 			"command": "npx",
 			"args": ["-y", "--package=task-master-ai", "task-master-ai"],
 			"env": {
+				"OPENROUTER_API_KEY": "$OPENROUTER_API_KEY",
 				"TEMPERATURE": 0.4
 			}
 		}

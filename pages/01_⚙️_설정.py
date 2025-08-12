@@ -1,6 +1,7 @@
 """
 ⚙️ 설정 페이지
 환경설정 및 검증 기능을 제공합니다.
+Streamlit 네이티브 컴포넌트 우선 사용으로 안정적이고 일관된 UI 제공
 """
 import os
 import streamlit as st

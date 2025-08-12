@@ -389,7 +389,7 @@
         "id": 15,
         "title": "Streamlit 네이티브 컴포넌트 기반 UI/UX 개선",
         "description": "AI 한국은행 경제 분석팀 앱의 UI/UX를 Streamlit 네이티브 컴포넌트를 최대한 활용하여 전면 개선합니다. 상세 연구 결과를 바탕으로 구체적인 구현 방안과 코드 예시가 포함된 체계적인 개선 작업을 진행합니다.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           14
         ],
@@ -401,47 +401,47 @@
             "id": 1,
             "title": "상단 헤더 컴팩트화 및 상태 정보 통합",
             "description": "제목을 작은 크기로 변경하고 현재 상태 정보를 통합하여 상단 헤더를 개선합니다. (복잡도: 3/10)",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "1. st.title을 st.header로 변경하여 크기 축소\n2. st.columns([3, 1])을 활용하여 제목과 상태 정보를 나란히 배치\n3. 현재 상태 정보(메시지 수, 분석 진행 상태 등)를 st.info로 표시\n4. 기존 기능은 모두 보존하면서 시각적 개선\n\n**구현 코드 예시:**\n```python\ncol1, col2 = st.columns([3, 1])\nwith col1:\n    st.header(\"📊 AI 한국은행 경제 분석팀\")\nwith col2:\n    st.info(f\"💬 {len(st.session_state.get('messages', []))}개 메시지\")\n```",
+            "details": "1. st.title을 st.header로 변경하여 크기 축소\n2. st.columns([3, 1])을 활용하여 제목과 상태 정보를 나란히 배치\n3. 현재 상태 정보(메시지 수, 분석 진행 상태 등)를 st.info로 표시\n4. 기존 기능은 모두 보존하면서 시각적 개선\n\n**구현 코드 예시:**\n```python\ncol1, col2 = st.columns([3, 1])\nwith col1:\n    st.header(\"📊 AI 한국은행 경제 분석팀\")\nwith col2:\n    st.info(f\"💬 {len(st.session_state.get('messages', []))}개 메시지\")\n```\n<info added on 2025-08-12T05:12:25.821Z>\n**✅ Task 15.1 완료 보고서**\n\n## 구현 완료 사항\n\n### 1. 헤더 컴팩트화\n- `st.title`을 `st.header`로 변경하여 크기 축소 완료\n- 제목에서 버전 정보 \"(LangGraph v0.3.x)\" 제거하여 간소화\n- `st.caption`을 사용하여 설명 텍스트를 더 작게 표시\n\n### 2. 상태 정보 통합\n- `st.columns([3, 1])`을 활용하여 제목과 상태 정보를 나란히 배치\n- 메시지 개수 표시: 초기 메시지를 제외한 실제 대화 메시지 수\n- 웹검색 상태 표시: \"🌐 ON/OFF\" 형태로 직관적 표시\n- `st.info`를 사용하여 상태 정보를 시각적으로 구분\n\n### 3. 구현된 코드\n```python\n# 헤더 컴팩트화 및 상태 정보 통합\ncol1, col2 = st.columns([3, 1])\nwith col1:\n    st.header(\"🏦 AI 한국은행 경제 분석팀\")\n    st.caption(\"멀티 에이전트가 협력하여 질문에 대한 심층 분석을 제공합니다.\")\nwith col2:\n    # 상태 정보 표시\n    messages = StateManager.get_messages()\n    message_count = len(messages) - 1  # 초기 메시지 제외\n    web_search_status = \"🌐 ON\" if StateManager.get_web_search_enabled() else \"🌐 OFF\"\n    st.info(f\"💬 {message_count}개 메시지\\n{web_search_status}\")\n```\n\n### 4. 개선 효과\n- **공간 효율성**: 헤더 크기 축소로 더 많은 공간 확보\n- **정보 가시성**: 현재 상태를 한눈에 파악 가능\n- **일관성**: Streamlit 네이티브 컴포넌트 활용으로 일관된 UI\n- **사용자 경험**: 실시간 상태 정보로 더 나은 상호작용\n\n### 5. 테스트 결과\n- ✅ 모듈 import 정상 작동\n- ✅ 코드 문법 오류 없음\n- ✅ 기존 기능 보존 확인\n- ✅ 레이아웃 변경 적용 완료\n\n이제 다음 서브태스크인 \"사이드바 간소화 및 파일 업로드 중심화\"로 진행할 준비가 완료되었습니다.\n</info added on 2025-08-12T05:12:25.821Z>",
             "testStrategy": ""
           },
           {
             "id": 2,
             "title": "사이드바 간소화 및 파일 업로드 중심화",
             "description": "사이드바에서 분석 로그를 제거하고 파일 업로드 기능만 남겨 공간 효율성을 극대화합니다. (복잡도: 4/10)",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "1. components/sidebar.py에서 분석 로그 관련 코드 제거\n2. 파일 업로드 기능을 사이드바의 주요 기능으로 강화\n3. st.expander를 활용하여 필요시 추가 정보 표시\n4. 공간 효율성을 위한 레이아웃 최적화\n5. 업로드된 파일 목록 및 상태를 간결하게 표시",
+            "details": "1. components/sidebar.py에서 분석 로그 관련 코드 제거\n2. 파일 업로드 기능을 사이드바의 주요 기능으로 강화\n3. st.expander를 활용하여 필요시 추가 정보 표시\n4. 공간 효율성을 위한 레이아웃 최적화\n5. 업로드된 파일 목록 및 상태를 간결하게 표시\n<info added on 2025-08-12T05:13:58.460Z>\n**✅ Task 15.2 완료 - 사이드바 간소화 및 파일 업로드 중심화**\n\n## 구현 완료 사항\n\n### 1. 분석 로그 제거\n- 사이드바에서 분석 로그 관련 코드 완전 제거\n- 로그 설정, 로그 표시 영역, 로그 클리어 기능 모두 제거\n- 공간 효율성 극대화 달성\n\n### 2. 파일 업로드 기능 강화\n- 헤더를 \"📁 파일 업로드\"로 변경하여 목적 명확화\n- 파일 업로더에 help 텍스트 추가로 사용성 향상\n- 업로드 성공 메시지를 더 명확하게 개선\n\n### 3. 레이아웃 최적화\n- 현재 참고 자료를 `st.expander`로 감싸서 필요시에만 표시\n- 시스템 관리 기능을 별도 expander로 분리\n- 사용 팁을 간소화하여 `st.caption`으로 표시\n\n### 4. 구현된 개선사항\n```python\n# 파일 업로드 중심 헤더\nst.header(\"📁 파일 업로드\")\n\n# 강화된 파일 업로더\nuploaded_files = st.file_uploader(\n    \"분석에 참고할 PDF 파일을 업로드하세요.\",\n    type=\"pdf\",\n    accept_multiple_files=True,\n    help=\"여러 PDF 파일을 선택하여 업로드할 수 있습니다.\",\n    key=f\"uploader_{StateManager.get_uploader_key()}\"\n)\n\n# 간소화된 참고 자료 표시\nwith st.expander(\"📚 현재 참고 자료\", expanded=False):\n    # 파일 목록 표시\n\n# 시스템 관리 기능 분리\nwith st.expander(\"⚙️ 시스템 관리\", expanded=False):\n    # 그래프 재구성 버튼\n```\n\n### 5. 개선 효과\n- **공간 효율성**: 분석 로그 제거로 사이드바 공간 확보\n- **사용성 향상**: 파일 업로드에 집중된 직관적 인터페이스\n- **정보 계층화**: expander를 통한 필요시 정보 접근\n- **시각적 개선**: 더 깔끔하고 정리된 레이아웃\n\n이제 Task 15.4 (분석 로그 채팅 영역 이동)의 의존성이 해결되어 다음 단계로 진행할 수 있습니다.\n</info added on 2025-08-12T05:13:58.460Z>",
             "testStrategy": ""
           },
           {
             "id": 3,
             "title": "채팅 영역 레이아웃 개선 및 초기화 과정 통합",
             "description": "채팅 메시지와 초기화 과정을 하나의 자연스러운 플로우로 통합하여 사용자 경험을 개선합니다. (복잡도: 6/10)",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "1. 초기화 과정을 st.status에서 st.info 또는 st.warning으로 변경하여 채팅 영역에 통합\n2. st.container를 활용하여 채팅 메시지와 초기화 과정을 논리적으로 그룹화\n3. 스크롤 가능한 영역 내에서 자연스러운 정보 흐름 구현\n4. st.chat_message를 활용한 일관된 메시지 표시 방식 적용\n5. 기존 채팅 인터페이스 기능은 모두 보존",
+            "details": "1. 초기화 과정을 st.status에서 st.info 또는 st.warning으로 변경하여 채팅 영역에 통합\n2. st.container를 활용하여 채팅 메시지와 초기화 과정을 논리적으로 그룹화\n3. 스크롤 가능한 영역 내에서 자연스러운 정보 흐름 구현\n4. st.chat_message를 활용한 일관된 메시지 표시 방식 적용\n5. 기존 채팅 인터페이스 기능은 모두 보존\n<info added on 2025-08-12T05:22:35.915Z>\n**✅ Task 15.3 완료 - 채팅 영역 레이아웃 개선 및 초기화 과정 통합**\n\n## 구현 완료 사항\n\n### 1. 초기화 과정 채팅 영역 통합\n- `st.status`를 `st.chat_message(\"assistant\")`로 변경하여 채팅 영역에 통합\n- 초기화 과정을 자연스러운 대화 흐름으로 구현\n- 각 단계별 진행 상황을 명확하게 표시\n\n### 2. 분석 과정 채팅 영역 통합\n- 분석 시작 메시지를 `st.info`로 표시\n- 각 에이전트 단계(Supervisor, Researcher, Analyst)를 `st.write`로 표시\n- 실시간 진행 상황을 채팅 영역 내에서 확인 가능\n\n### 3. 구현된 개선사항\n```python\n# 초기화 과정 통합\nwith st.chat_message(\"assistant\"):\n    st.info(\"🔄 **AI 분석팀을 구성하는 중입니다...**\")\n    st.write(\"🧠 **LLM 초기화 중...**\")\n    st.write(\"✅ AzureChatOpenAI 인스턴스 생성 완료\")\n    st.write(\"📚 **RAG 파이프라인 구축 중...**\")\n    st.write(\"✅ RAG 리트리버 준비 완료\")\n    st.write(\"🕸️ **LangGraph 그래프 컴파일 중...**\")\n    st.success(\"✅ **초기화 완료!** 이제 질문하실 수 있습니다.\")\n\n# 분석 과정 통합\nwith st.chat_message(\"assistant\"):\n    st.info(\"🔄 **분석팀이 작업을 시작합니다...**\")\n    st.write(\"🧠 **Supervisor가 다음 단계를 결정 중입니다...**\")\n    st.write(\"🔍 **Researcher가 정보를 수집하고 있습니다...**\")\n    st.write(\"✍️ **Analyst가 데이터를 분석하고 보고서를 작성 중입니다...**\")\n```\n\n### 4. 개선 효과\n- **자연스러운 대화 흐름**: 초기화와 분석 과정이 채팅 메시지로 표시\n- **투명성 향상**: 각 단계별 진행 상황을 실시간으로 확인 가능\n- **사용자 경험 개선**: 복잡한 백엔드 과정을 이해하기 쉬운 형태로 표시\n- **일관성**: 모든 정보가 채팅 영역 내에서 통합적으로 표시\n\n### 5. 기존 기능 보존\n- 모든 초기화 및 분석 로직이 정상 작동\n- 로깅 기능이 그대로 유지됨\n- 에러 처리 및 예외 상황 대응 기능 보존\n\n이제 Task 15의 모든 서브태스크가 완료되어 전체 UI/UX 개선 작업이 마무리되었습니다.\n</info added on 2025-08-12T05:22:35.915Z>",
             "testStrategy": ""
           },
           {
             "id": 4,
             "title": "분석 로그 채팅 영역 이동 및 확장 가능 형태 구현",
             "description": "사이드바에서 제거된 분석 로그를 채팅 영역으로 이동하여 확장 가능한 형태로 구현합니다. (복잡도: 7/10)",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               2
             ],
-            "details": "1. st.expander(\"📊 분석 로그 보기\", expanded=False)를 활용하여 접을 수 있는 형태로 구현\n2. 채팅 메시지와 함께 자연스럽게 표시되도록 배치\n3. 분석 진행 상황을 실시간으로 업데이트하는 기능 구현\n4. 사용자가 필요시에만 로그를 확인할 수 있도록 UX 개선\n5. st.session_state를 활용한 로그 데이터 관리\n\n**구현 코드 예시:**\n```python\nwith st.expander(\"📊 분석 로그 보기\", expanded=False):\n    for log in st.session_state.get('analysis_logs', []):\n        st.write(log)\n```",
+            "details": "1. st.expander(\"📊 분석 로그 보기\", expanded=False)를 활용하여 접을 수 있는 형태로 구현\n2. 채팅 메시지와 함께 자연스럽게 표시되도록 배치\n3. 분석 진행 상황을 실시간으로 업데이트하는 기능 구현\n4. 사용자가 필요시에만 로그를 확인할 수 있도록 UX 개선\n5. st.session_state를 활용한 로그 데이터 관리\n\n**구현 코드 예시:**\n```python\nwith st.expander(\"📊 분석 로그 보기\", expanded=False):\n    for log in st.session_state.get('analysis_logs', []):\n        st.write(log)\n```\n<info added on 2025-08-12T05:18:39.228Z>\n**Task 15.4 완료 - 분석 로그 채팅 영역 이동 및 확장 가능 형태 구현**\n\n## 구현 완료 사항\n\n### 1. 분석 로그 채팅 영역 이동\n- 사이드바에서 제거된 분석 로그를 채팅 영역으로 성공적으로 이동\n- `render_chat_messages` 함수 내에서 로그를 표시하도록 통합\n- 채팅 메시지와 함께 자연스럽게 표시되도록 배치\n\n### 2. 확장 가능한 형태 구현\n- `st.expander(\"📊 분석 로그 보기\", expanded=False)`를 활용하여 접을 수 있는 형태로 구현\n- 사용자가 필요시에만 로그를 확인할 수 있도록 UX 개선\n- 기본적으로 접혀있어 공간 효율성 확보\n\n### 3. 실시간 로그 업데이트 기능\n- `StateManager.get_show_logs()`를 통해 로그 표시 상태 확인\n- `logger.get_recent_logs(5)`로 최근 5개 로그 표시 (기존 3개에서 증가)\n- 로그 레벨에 따른 색상 구분 유지 (error, warning, info, text)\n\n### 4. 구현된 코드\n```python\n# 분석 로그를 확장 가능한 형태로 표시 (로그 표시가 활성화된 경우에만)\nif StateManager.get_show_logs():\n    recent_logs = logger.get_recent_logs(5)  # 최근 5개 로그 표시\n    if recent_logs:\n        with st.expander(\"📊 분석 로그 보기\", expanded=False):\n            st.markdown(\"**실시간 분석 과정:**\")\n            # 로그를 역순으로 표시 (최신 로그가 위에)\n            for log in reversed(recent_logs):\n                if \"❌\" in log or \"🚨\" in log:\n                    st.error(log, icon=\"❌\")\n                elif \"⚠️\" in log:\n                    st.warning(log, icon=\"⚠️\")\n                elif \"ℹ️\" in log:\n                    st.info(log, icon=\"ℹ️\")\n                else:\n                    st.text(log)\n```\n\n### 5. 개선 효과\n- **공간 효율성**: 사이드바 공간 확보 및 필요시에만 로그 표시\n- **사용자 경험**: 채팅 영역 내에서 자연스러운 로그 확인\n- **정보 접근성**: 확장 가능한 형태로 원하는 시점에 로그 확인\n- **시각적 일관성**: 채팅 메시지와 함께 표시되어 일관된 UI\n\n### 6. 기존 기능 보존\n- 로그 표시 토글 기능이 정상 작동\n- 로그 레벨별 색상 구분 유지\n- 실시간 로그 업데이트 기능 보존\n</info added on 2025-08-12T05:18:39.228Z>",
             "testStrategy": ""
           },
           {
             "id": 5,
             "title": "채팅 입력창 하단 배치 및 컨트롤 버튼 최적화",
             "description": "채팅 입력창을 자연스러운 하단 위치로 이동하고 컨트롤 버튼과 함께 최적화합니다. (복잡도: 5/10)",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "1. st.chat_input을 활용하여 네이티브 채팅 입력창 구현\n2. st.container를 활용한 채팅 영역과 입력창 분리 배치\n3. 컨트롤 버튼(초기화, 새 질문 등)을 입력창 근처에 배치하여 사용성 향상\n4. st.columns를 활용하여 입력창과 버튼을 효율적으로 배치\n5. 기존 입력 기능은 모두 보존하면서 UX 개선\n\n**구현 코드 예시:**\n```python\nchat_container = st.container()\ninput_container = st.container()\n\nwith chat_container:\n    for msg in st.session_state.get('messages', []):\n        with st.chat_message(msg['role']):\n            st.write(msg['content'])\n\nwith input_container:\n    user_input = st.chat_input(\"질문을 입력하세요\")\n```",
+            "details": "1. st.chat_input을 활용하여 네이티브 채팅 입력창 구현\n2. st.container를 활용한 채팅 영역과 입력창 분리 배치\n3. 컨트롤 버튼(초기화, 새 질문 등)을 입력창 근처에 배치하여 사용성 향상\n4. st.columns를 활용하여 입력창과 버튼을 효율적으로 배치\n5. 기존 입력 기능은 모두 보존하면서 UX 개선\n\n**구현 코드 예시:**\n```python\nchat_container = st.container()\ninput_container = st.container()\n\nwith chat_container:\n    for msg in st.session_state.get('messages', []):\n        with st.chat_message(msg['role']):\n            st.write(msg['content'])\n\nwith input_container:\n    user_input = st.chat_input(\"질문을 입력하세요\")\n```\n<info added on 2025-08-12T05:16:36.334Z>\n**✅ Task 15.5 완료 - 채팅 입력창 하단 배치 및 컨트롤 버튼 최적화**\n\n## 구현 완료 사항\n\n### 1. 채팅 입력창 하단 배치\n- `st.container`를 활용하여 채팅 영역과 입력창을 논리적으로 분리\n- 채팅 메시지 영역을 별도 컨테이너로 감싸서 스크롤 가능하게 구현\n- 입력창을 하단에 고정 배치하여 자연스러운 채팅 인터페이스 구현\n\n### 2. 컨트롤 버튼 최적화\n- 컨트롤 버튼을 입력창 근처에 배치하여 사용성 향상\n- `st.columns([1, 1, 1, 1])`을 활용하여 버튼들을 효율적으로 배치\n- 각 버튼에 적절한 help 텍스트와 아이콘으로 직관성 향상\n\n### 3. 레이아웃 개선\n- 헤더를 최상단에 배치\n- 채팅 메시지 영역을 중앙에 배치 (스크롤 가능)\n- 컨트롤 버튼과 입력창을 하단에 고정 배치\n\n### 4. 구현된 코드 구조\n```python\n# 헤더 영역\ncol1, col2 = st.columns([3, 1])\n# 헤더 내용...\n\n# 채팅 메시지 영역 (스크롤 가능)\nchat_container = st.container()\nwith chat_container:\n    render_chat_messages()\n\n# 하단 입력 영역 (고정 위치)\ninput_container = st.container()\nwith input_container:\n    # 컨트롤 버튼들\n    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])\n    # 버튼들...\n    \n    # 채팅 입력창 (하단 고정)\n    prompt = st.chat_input(\"질문을 입력하세요\")\n```\n\n### 5. 개선 효과\n- **자연스러운 채팅 경험**: 입력창이 하단에 고정되어 일반적인 채팅 앱과 유사한 UX\n- **사용성 향상**: 컨트롤 버튼이 입력창 근처에 있어 접근성 향상\n- **공간 효율성**: 채팅 영역이 더 넓어져 메시지 표시 공간 확대\n- **일관성**: Streamlit 네이티브 컴포넌트 활용으로 일관된 UI\n\n### 6. 기존 기능 보존\n- 모든 컨트롤 버튼 기능이 그대로 유지됨\n- 채팅 입력 기능이 정상 작동함\n- 상태 관리가 올바르게 동작함\n</info added on 2025-08-12T05:16:36.334Z>",
             "testStrategy": ""
           }
         ]
@@ -449,7 +449,7 @@
     ],
     "metadata": {
       "created": "2025-08-11T04:36:34.710Z",
-      "updated": "2025-08-12T04:49:47.799Z",
+      "updated": "2025-08-12T05:22:42.434Z",
       "description": "Tasks for master context"
     }
   }
