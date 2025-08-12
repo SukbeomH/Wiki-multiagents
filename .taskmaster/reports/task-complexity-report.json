@@ -1,45 +1,61 @@
 {
 	"meta": {
-		"generatedAt": "2025-08-12T02:05:59.064Z",
-		"tasksAnalyzed": 4,
-		"totalTasks": 14,
-		"analysisCount": 4,
+		"generatedAt": "2025-08-12T05:07:02.524Z",
+		"tasksAnalyzed": 1,
+		"totalTasks": 15,
+		"analysisCount": 6,
 		"thresholdScore": 5,
 		"projectName": "Taskmaster",
 		"usedResearch": true
 	},
 	"complexityAnalysis": [
 		{
-			"taskId": 11,
-			"taskTitle": "실제 동작 검증(E2E) 테스트 및 문서화",
-			"complexityScore": 8,
+			"taskId": 15,
+			"taskTitle": "Streamlit 네이티브 컴포넌트 기반 UI/UX 개선",
+			"complexityScore": 7,
 			"recommendedSubtasks": 6,
-			"expansionPrompt": "각 검증 단계별 상세 테스트 케이스 작성 및 자동화 방안, 예외 시나리오별 대응 절차, 로그 및 스크린샷 수집 자동화, README 문서화 템플릿 개발을 포함한 세부 작업을 정의하세요.",
-			"reasoning": "통합 시스템의 실제 환경 검증, 다양한 기능(환경설정, 앱 실행, 파일 업로드, 멀티 에이전트 라우팅, 예외 처리)과 문서화까지 포괄하는 복합적 작업으로, 여러 단계와 예외 상황을 체계적으로 검증해야 하므로 높은 난이도를 가짐. 이미 6개의 세부 작업으로 나누어져 있어 적절한 분할 상태임."
+			"expansionPrompt": "각 UI/UX 개선 목표별로 세부 구현 단계와 테스트 케이스를 정의하고, 사용자 피드백 수집 및 반영 프로세스를 포함한 확장 계획을 작성하세요.",
+			"reasoning": "Streamlit의 네이티브 컴포넌트를 활용한 UI/UX 개선은 기존 기능 보존과 레이아웃 재구성, 사용자 경험 향상을 동시에 요구하여 중상급 난이도입니다. 5개의 주요 개선 목표가 이미 세부 작업으로 나뉘어 있으나, 각 작업 내 세부 구현 단계, 테스트, 사용자 피드백 반영 등으로 추가 세분화가 필요합니다. Streamlit의 레이아웃, 상태 관리, 확장 가능한 UI 설계에 대한 이해가 필수이며, 최신 베스트 프랙티스에 맞춘 구조화가 요구됩니다[1][2][3][4]."
 		},
 		{
-			"taskId": 12,
-			"taskTitle": "안정성/성능/로깅 개선 리팩터링",
+			"taskId": 1,
+			"taskTitle": "상단 헤더 컴팩트화 및 상태 정보 통합",
+			"complexityScore": 3,
+			"recommendedSubtasks": 2,
+			"expansionPrompt": "헤더 크기 조정, 상태 정보 통합, 레이아웃 배치 세부 구현 및 UI 테스트 케이스를 작성하세요.",
+			"reasoning": "헤더 크기 축소와 상태 정보 통합은 Streamlit 기본 컴포넌트(st.header, st.columns 등)를 활용하는 단순 UI 조정 작업으로 난이도가 낮습니다. 다만, 정보 배치와 가독성 확보를 위한 디자인 고려가 필요합니다[1][2]."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "사이드바 간소화 및 파일 업로드 중심화",
+			"complexityScore": 4,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "분석 로그 제거, 파일 업로드 기능 강화, 레이아웃 최적화 및 사용자 테스트 계획을 포함한 세부 작업을 작성하세요.",
+			"reasoning": "사이드바 내 기능 축소와 파일 업로드 중심 재구성은 코드 리팩토링과 UI 재배치가 필요하며, 사용자 편의성 및 공간 효율성 고려가 요구됩니다. st.expander 활용 등 Streamlit 레이아웃 컴포넌트 활용 경험이 필요합니다[2][3]."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "채팅 영역 레이아웃 개선 및 초기화 과정 통합",
 			"complexityScore": 6,
 			"recommendedSubtasks": 4,
-			"expansionPrompt": "캐시 키 생성 로직 개선, 파이프라인 시그니처 단순화, 툴 호출 인자 파싱 강화, 불필요 임포트 정리, 로깅 레벨 토글 추가 등 각 개선 항목별 상세 구현 및 테스트 계획을 수립하세요.",
-			"reasoning": "코드 리팩터링과 성능 및 안정성 개선 작업으로, 기존 기능을 유지하면서 코드 품질과 로깅 기능을 향상시키는 중간 난이도 작업. 이미 4개의 세부 작업으로 구분되어 있어 적절한 분할임."
+			"expansionPrompt": "초기화 메시지 스타일 변경, 채팅 메시지와 초기화 과정 그룹화, 스크롤 영역 구현, UX 테스트 계획을 포함한 세부 작업을 작성하세요.",
+			"reasoning": "채팅 영역 내 초기화 과정과 메시지의 자연스러운 통합은 UI 흐름 설계와 상태 관리가 복합적으로 요구되는 작업입니다. st.container, st.status, st.info 등 다양한 컴포넌트 조합과 사용자 경험 최적화가 필요해 중상급 난이도입니다[1][4]."
 		},
 		{
-			"taskId": 13,
-			"taskTitle": "운영 안정화 및 품질 개선 리팩터링",
-			"complexityScore": 9,
-			"recommendedSubtasks": 7,
-			"expansionPrompt": "라우팅 엄격화, 루프 차단, 결과 신뢰성 강화, RAG 인덱스 영속화, UI 개선, 로깅 강화, 문서 및 테스트 추가 등 각 영역별 세부 구현 및 검증 절차를 상세히 정의하세요.",
-			"reasoning": "시스템 전반에 걸친 안정성, 품질, 성능, UI, 로깅, 문서화 등 다방면의 복합적 리팩터링으로 매우 높은 난이도를 가짐. 7개의 세부 작업으로 이미 세분화되어 있어 적절함."
-		},
-		{
-			"taskId": 14,
-			"taskTitle": "Streamlit 앱 구조 표준화 및 레이아웃 리팩토링",
+			"taskId": 4,
+			"taskTitle": "분석 로그 채팅 영역 이동 및 확장 가능 형태 구현",
 			"complexityScore": 7,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "프로젝트 구조 표준화, 레이아웃 및 스타일 표준화, 상태 관리 개선, 설정 파일 표준화, 멀티페이지 및 컴포넌트 재사용성 확보 등 각 영역별 구체적 리팩터링 계획과 테스트 케이스를 작성하세요.",
-			"reasoning": "UI/UX 및 코드 구조 개선 작업으로, 유지보수성과 확장성을 높이기 위한 중상급 난이도 작업. 5개의 세부 작업으로 적절히 분할되어 있음."
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "분석 로그 UI 확장성 설계, st.expander 활용, 실시간 로그 업데이트 기능 구현, 사용자 접근성 및 성능 테스트 계획을 포함한 세부 작업을 작성하세요.",
+			"reasoning": "분석 로그를 채팅 영역으로 이동시키고 확장 가능한 UI로 구현하는 작업은 실시간 데이터 업데이트, 사용자 인터랙션, UI 확장성 설계가 요구되어 난이도가 높습니다. Streamlit의 동적 UI 처리 및 상태 관리에 대한 깊은 이해가 필요합니다[3][4]."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "채팅 입력창 하단 배치 및 컨트롤 버튼 최적화",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "입력창 하단 배치 구현, 컨트롤 버튼 배치 및 기능 최적화, UI 반응성 테스트 계획을 포함한 세부 작업을 작성하세요.",
+			"reasoning": "채팅 입력창을 하단에 배치하고 버튼과 함께 효율적으로 배치하는 작업은 레이아웃 조정과 사용자 편의성 개선이 핵심입니다. st.columns 활용과 기존 기능 유지가 요구되며, 중간 난이도의 UI 조정 작업입니다[1][2]."
 		}
 	]
 }

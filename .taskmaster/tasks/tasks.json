@@ -136,7 +136,7 @@
         "description": "통합된 시스템(app.py)이 실제 환경에서 문제 없이 동작함을 검증하고, 실행 로그와 스크린샷을 수집하여 README에 반영합니다.",
         "details": "1. 환경 검증 단계:\n   - .env 파일 필수 변수 확인 (AOAI_ENDPOINT, AOAI_API_KEY, AOAI_DEPLOY_GPT4O, AOAI_DEPLOY_EMBED_3_LARGE)\n   - uv venv 생성 및 활성화 확인\n   - uv pip install -r requirements.txt 설치 완료 검증\n   - 환경 변수 누락 시 에러 메시지 가독성 확인\n\n2. 앱 실행 검증:\n   - uv run streamlit run app.py 또는 streamlit run app.py로 실행\n   - 초기 로딩 중 오류 없음 확인\n   - 페이지 제목 및 기본 UI 요소 정상 표시 확인\n\n3. 파일 업로드 및 RAG 기능 검증:\n   - data/ 폴더 비어있을 때 기본 데이터 경고/안내 표시 확인\n   - PDF 1~2개 업로드 후 캐시 초기화(st.cache_resource.clear()) 및 재실행(st.rerun) 동작 확인\n   - 업로드한 파일명이 사이드바에 정상 표시되는지 확인\n   - 벡터 인덱스 생성 및 RAG 파이프라인 구축 확인\n\n4. 질의 및 멀티 에이전트 라우팅 검증:\n   - 예시 질문 입력 시 st.status 단계별 표시 확인 (Supervisor/Researcher/Analyst)\n   - Researcher 도구 호출(bok_document_search, web_search) 정상 동작 확인\n   - ddgs 검색 실패/네트워크 예외 시 복구 동작 및 사용자 친화적 안내 확인\n   - Analyst 결과 생성 및 Supervisor 최종 응답(Final Answer) 수신 확인\n   - API rate limit/timeout 상황 시 메시지 처리 확인\n\n5. 예외 및 에러 처리 검증:\n   - 환경 변수 누락/잘못된 경우 에러 메시지 가독성 확인\n   - 네트워크 연결 실패 시 사용자 친화적 안내 확인\n   - 파일 업로드 실패 시 적절한 에러 처리 확인\n\n6. 산출물 생성:\n   - 각 단계별 실행 로그 수집 및 정리\n   - 주요 기능 동작 스크린샷 캡처 (업로드, 상태 변화, 최종 응답)\n   - README의 실행 가이드 및 트러블슈팅 섹션 업데이트\n   - 발견된 문제점 및 개선사항을 이슈화 또는 TODO로 반영",
         "testStrategy": "1. 체크리스트 기반 검증:\n   - 환경 설정부터 최종 응답까지 전체 플로우 단계별 체크\n   - 각 검증 항목별 통과/실패 기록 및 스크린샷 수집\n   - 예외 상황 시나리오별 테스트 (환경 변수 누락, 네트워크 오류, 파일 업로드 실패 등)\n\n2. 실제 사용자 시나리오 테스트:\n   - 신규 사용자 관점에서 README 가이드만으로 설치 및 실행 가능한지 확인\n   - 다양한 경제 관련 질문으로 멀티 에이전트 시스템 동작 검증\n   - 여러 PDF 파일 업로드 시 성능 및 안정성 확인\n\n3. 문서화 검증:\n   - 수집된 스크린샷과 로그가 README에 적절히 반영되었는지 확인\n   - 트러블슈팅 가이드가 실제 발생 가능한 문제들을 다루는지 검증\n   - 실행 가이드의 명확성 및 완성도 확인\n\n4. 완료 조건 확인:\n   - 모든 체크리스트 항목 통과\n   - 문제점 및 개선사항 이슈화 완료\n   - README 업데이트 완료 및 실제 동작 스크린샷 포함 확인",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           10
         ],
@@ -183,7 +183,7 @@
             "title": "예외/에러 처리 시나리오 검증",
             "description": "주요 실패 케이스에서 사용자 친화적 메시지와 복구 동작을 확인합니다.",
             "details": "- 환경 변수 누락/오류 → 가독성 있는 에러 안내\n- ddgs 검색 실패/네트워크 예외 → 안내 메시지 및 재시도 흐름\n- API rate limit/timeout 가정 → 메시지 처리 확인\n- 수용 기준: 앱 크래시 없이 안내/복구",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 11
           },
@@ -192,7 +192,7 @@
             "title": "산출물 정리 및 README 반영",
             "description": "검증 로그/스크린샷을 정리하고 README에 반영합니다.",
             "details": "- 업로드/상태 변화/최종 응답 스크린샷 수집\n- README 실행 가이드/트러블슈팅 섹션 업데이트\n- 수용 기준: 문서 변경이 리포지토리에 반영",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 11
           }
@@ -204,7 +204,7 @@
         "description": "RAG 캐시 정확도 강화, 파이프라인 시그니처 간소화, 툴 호출 인자 파싱 강건성 향상, 불필요 임포트 정리, 로깅 레벨 토글 추가를 통한 전체 시스템 안정성 및 성능 개선",
         "details": "1. 캐시 키 정확도 강화 (rag_pipeline.py):\n```python\nimport os\nfrom pathlib import Path\n\ndef generate_cache_key(pdf_files):\n    \"\"\"PDF 파일명 + mtime을 포함한 정확한 캐시 키 생성\"\"\"\n    cache_parts = []\n    for file_path in sorted(pdf_files):\n        if os.path.exists(file_path):\n            mtime = os.path.getmtime(file_path)\n            filename = Path(file_path).name\n            cache_parts.append(f\"{filename}_{int(mtime)}\")\n    return \"_\".join(cache_parts)\n\ndef build_rag_pipeline(cache_key=None):\n    \"\"\"시그니처 간소화: cache_key만 받아 내부에서 모델/임베딩/리트리버 생성\"\"\"\n    if not cache_key:\n        # data/ 폴더에서 PDF 파일 스캔하여 자동 생성\n        pdf_files = list(Path(\"data\").glob(\"*.pdf\"))\n        cache_key = generate_cache_key(pdf_files)\n    \n    # 내부에서 모든 컴포넌트 생성\n    model = get_azure_openai_model()\n    embeddings = get_azure_openai_embeddings()\n    # ... 리트리버 생성 로직\n```\n\n2. Tool 호출 인자 파싱 강건성 향상 (agents.py):\n```python\ndef safe_extract_query(args):\n    \"\"\"안전한 쿼리 추출: args.input→args.query→첫 값 순으로 시도\"\"\"\n    try:\n        # 첫 번째 시도: args.input\n        if hasattr(args, 'input') and args.input:\n            return args.input\n        # 두 번째 시도: args.query  \n        if hasattr(args, 'query') and args.query:\n            return args.query\n        # 세 번째 시도: 첫 번째 속성 값\n        if hasattr(args, '__dict__'):\n            for key, value in args.__dict__.items():\n                if value and isinstance(value, str):\n                    return value\n        return \"질문을 파싱할 수 없습니다\"\n    except Exception as e:\n        logging.warning(f\"인자 파싱 실패: {e}\")\n        return \"질문을 파싱할 수 없습니다\"\n```\n\n3. 불필요 임포트 정리:\n- BaseMessage, unused typing imports 제거\n- 실제 사용되는 임포트만 유지\n- import 순서 정리 (표준 라이브러리 → 서드파티 → 로컬)\n\n4. 로깅 레벨 토글 추가:\n```python\nimport logging\nimport os\n\n# .env에서 LOG_LEVEL 읽기 (기본값: INFO)\nlog_level = os.getenv('LOG_LEVEL', 'INFO').upper()\nlogging.basicConfig(\n    level=getattr(logging, log_level, logging.INFO),\n    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'\n)\n\nlogger = logging.getLogger(__name__)\n```\n\n5. 문서화 업데이트 (README.md):\n- 로깅 설정 방법 (.env의 LOG_LEVEL 변수)\n- 캐시 동작 원리 (파일명 + mtime 기반)\n- 시스템 재구성 후 주요 변경사항 설명",
         "testStrategy": "1. 캐시 키 정확도 검증:\n   - 동일 파일 여러 번 업로드 시 동일 캐시 키 생성 확인\n   - 파일 수정 후 다른 캐시 키 생성 확인\n   - 파일명 변경 시 다른 캐시 키 생성 확인\n\n2. 파이프라인 시그니처 검증:\n   - build_rag_pipeline() 인자 없이 호출 성공 확인\n   - build_rag_pipeline(cache_key) 명시적 호출 성공 확인\n   - 내부에서 모든 컴포넌트 정상 생성 확인\n\n3. Tool 인자 파싱 강건성 테스트:\n   - 정상적인 args.input 케이스 테스트\n   - args.query만 있는 케이스 테스트\n   - 비정상적인 인자 구조에서 안전한 fallback 확인\n   - 예외 발생 시 기본값 반환 확인\n\n4. 로깅 레벨 토글 테스트:\n   - LOG_LEVEL=DEBUG 설정 후 디버그 메시지 출력 확인\n   - LOG_LEVEL=INFO 설정 후 정보 메시지만 출력 확인\n   - LOG_LEVEL 미설정 시 기본 INFO 레벨 동작 확인\n\n5. 전체 시스템 안정성 검증:\n   - 리팩터링 후 기존 기능 정상 동작 확인\n   - 성능 개선 효과 측정 (캐시 히트율, 응답 시간)\n   - 에러 로그 감소 및 로그 가독성 향상 확인",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           10
         ],
@@ -254,7 +254,7 @@
         "description": "시스템의 운영 안정성과 품질을 향상시키기 위해 라우팅 엄격화, 루프 차단, 결과 신뢰성 강화, RAG 최적화, UI 개선, 로깅 강화 및 문서화를 포함한 종합적인 리팩터링을 수행합니다.",
         "details": "1. Supervisor 라우팅 엄격화 (agents.py):\n```python\nclass RouteResponse(BaseModel):\n    next: Literal[\"researcher\", \"analyst\", \"ROUTE\", \"Final Answer\", \"END\"] = Field(\n        description=\"다음에 호출할 에이전트 선택 - 불명확시 END 반환\"\n    )\n\ndef supervisor_node(state: AgentState):\n    # 불명확한 상황에서 END로 라우팅하는 로직 강화\n    if len(state[\"messages\"]) > MAX_ITERATIONS:\n        return {\"next\": \"END\"}\n```\n\n2. 루프 차단 및 재귀 한도 설정 (graph.py):\n```python\nMAX_ITERATIONS = 10\nTIMEOUT_SECONDS = 300\nRETRY_COUNT = 3\n\ndef create_graph_with_limits(retriever=None):\n    workflow = StateGraph(AgentState)\n    # 타임아웃 및 재시도 로직 추가\n    workflow.add_conditional_edges(\n        \"supervisor\",\n        lambda x: check_iteration_limit(x),\n        {\"continue\": \"researcher\", \"end\": END}\n    )\n```\n\n3. 결과 신뢰성 강화 (agents.py):\n```python\nCITATION_FORMAT = \"\"\"\n출처: [{source_name}] {page_info}\n근거: {evidence_text}\n신뢰도: {confidence_score}\n\"\"\"\n\ndef format_response_with_citations(content, sources):\n    # 고정 포맷으로 출처 및 인용 정보 포함\n    # 근거 부족 시 재조회 로직 구현\n```\n\n4. RAG 인덱스 영속화 및 검색 튜닝 (rag_pipeline.py):\n```python\nimport faiss\nfrom langchain.retrievers import ContextualCompressionRetriever\nfrom langchain.retrievers.document_compressors import LLMChainExtractor\n\ndef save_faiss_index(vectorstore, index_path):\n    vectorstore.save_local(index_path)\n\ndef load_faiss_index(index_path):\n    return FAISS.load_local(index_path)\n\ndef create_mmr_retriever(vectorstore, k=5, fetch_k=20):\n    return vectorstore.as_retriever(\n        search_type=\"mmr\",\n        search_kwargs={\"k\": k, \"fetch_k\": fetch_k}\n    )\n\ndef create_compressed_retriever(base_retriever):\n    compressor = LLMChainExtractor.from_llm(llm)\n    return ContextualCompressionRetriever(\n        base_compressor=compressor,\n        base_retriever=base_retriever\n    )\n```\n\n5. UI 개선 (app.py):\n```python\n# 웹 검색 토글\nweb_search_enabled = st.sidebar.toggle(\"웹 검색 활성화\", value=True)\n\n# 근거 미리보기\nwith st.expander(\"📋 근거 미리보기\"):\n    st.write(preview_sources)\n\n# 대화 관리\ncol1, col2 = st.columns(2)\nwith col1:\n    if st.button(\"🔄 대화 초기화\"):\n        st.session_state.messages = []\n        st.rerun()\nwith col2:\n    if st.button(\"📤 대화 내보내기\"):\n        export_conversation()\n```\n\n6. 운영 로깅 강화 (logging_config.py):\n```python\nimport logging\nimport json\nfrom logging.handlers import RotatingFileHandler\n\ndef setup_operational_logging():\n    logger = logging.getLogger(\"economic_analysis\")\n    \n    # JSON 라인 포맷터\n    class JSONLineFormatter(logging.Formatter):\n        def format(self, record):\n            log_entry = {\n                \"timestamp\": self.formatTime(record),\n                \"level\": record.levelname,\n                \"message\": record.getMessage(),\n                \"module\": record.module\n            }\n            return json.dumps(log_entry, ensure_ascii=False)\n    \n    # 파일 핸들러 설정\n    file_handler = RotatingFileHandler(\n        \"logs/app.log\", maxBytes=10*1024*1024, backupCount=5\n    )\n    file_handler.setFormatter(JSONLineFormatter())\n    logger.addHandler(file_handler)\n\n# DDGS 재시도/폴백 로직\ndef search_with_fallback(query, max_retries=3):\n    for attempt in range(max_retries):\n        try:\n            return ddgs_search(query)\n        except Exception as e:\n            logger.warning(f\"DDGS 검색 실패 (시도 {attempt+1}): {e}\")\n            if attempt == max_retries - 1:\n                return fallback_search(query)\n```\n\n7. 문서화 및 테스트 추가:\n- .env.example 파일 생성\n- README.md 업데이트 (설치, 설정, 사용법)\n- PRD (Product Requirements Document) 작성\n- E2E 스모크 테스트 스크립트 구현",
         "testStrategy": "1. 라우팅 검증 스모크 테스트:\n   - 동일한 질문을 5회 반복하여 일관된 라우팅 경로 확인\n   - 불명확한 질문에 대해 END로 적절히 라우팅되는지 검증\n   - 최대 반복 횟수 도달 시 자동 종료 확인\n\n2. 루프 차단 및 한도 테스트:\n   - 의도적으로 무한 루프를 유발하는 시나리오 테스트\n   - 타임아웃 설정이 정상 작동하는지 확인\n   - 재시도 로직이 설정된 횟수만큼 동작하는지 검증\n\n3. 결과 신뢰성 검증:\n   - 출처 정보가 고정 포맷으로 일관되게 표시되는지 확인\n   - 근거 부족 시 재조회가 트리거되는지 테스트\n   - 신뢰도 점수가 적절히 계산되고 표시되는지 검증\n\n4. RAG 성능 테스트:\n   - FAISS 인덱스 저장/로드 기능 정상 동작 확인\n   - MMR 검색과 기존 유사도 검색 결과 비교\n   - 컨텍스트 압축 전후 응답 품질 비교\n\n5. UI 기능 테스트:\n   - 웹 검색 토글 on/off 시 동작 차이 확인\n   - 근거 미리보기 정보 정확성 검증\n   - 대화 초기화/내보내기 기능 정상 동작 확인\n\n6. 로깅 및 모니터링 검증:\n   - JSON 라인 로그 포맷 정확성 확인\n   - 파일 로테이션 정상 동작 테스트\n   - DDGS 재시도/폴백 시나리오별 로그 기록 확인\n\n7. 종합 스모크 테스트:\n   - 동일 질문 반복 시나리오로 라우팅, 결과, 출처의 일관성 검증\n   - 다양한 경제 질문으로 전체 시스템 안정성 확인\n   - 문서화된 설치/실행 가이드 검증",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [
@@ -308,7 +308,7 @@
             "title": "운영/장애대응 및 문서/테스트",
             "description": "파일 로깅(JSONL), DDGS 재시도/폴백. .env.example/README/PRD 업데이트. E2E 스모크 테스트 추가.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 13
           }
@@ -320,7 +320,7 @@
         "description": "Streamlit 앱의 구조를 개선하고, 레이아웃을 표준화하며, 하드코딩된 CSS를 제거하여 유지보수성과 확장성을 향상시킵니다.",
         "details": "**1. 프로젝트 구조 표준화:**\n    *   `pages/` 디렉토리에 각 페이지별 Streamlit 앱 분리 (예: `pages/1_📊_Dashboard.py`, `pages/2_📄_Document_Analysis.py`)\n    *   `components/` 디렉토리에 재사용 가능한 UI 컴포넌트(예: `components/sidebar.py`, `components/chat_display.py`) 생성\n    *   `core/` 또는 `utils/` 디렉토리에 핵심 로직 및 유틸리티 함수 분리 (예: `core/rag.py`, `utils/helpers.py`)\n    *   `app.py`는 메인 진입점으로, 멀티페이지 앱 설정을 포함하거나 간단한 라우팅 역할만 수행하도록 변경\n\n**2. 레이아웃 및 스타일 표준화:**\n    *   하드코딩된 CSS 제거: Streamlit의 내장 테마 및 스타일링 기능 활용 (예: `st.markdown(\"<style>...</style>\", unsafe_allow_html=True)` 대신 `st.columns`, `st.container`, `st.expander` 등 활용)\n    *   `st.container`를 사용하여 논리적 섹션 그룹화 및 레이아웃 관리\n    *   사이드바는 `st.sidebar`를 사용하여 표준화하고, 재사용 가능한 컴포넌트(`components/sidebar.py`)로 분리하여 관리\n\n**3. 상태 관리 개선:**\n    *   `st.session_state`를 사용하여 상태 관리를 중앙 집중화하고 명확하게 정의\n    *   복잡한 상태 로직은 별도 함수 또는 클래스로 분리하여 가독성 향상\n\n**4. 설정 파일 표준화:**\n    *   `.streamlit/config.toml` 파일을 사용하여 앱의 전역 설정(테마, 페이지 설정 등) 관리\n    *   환경 변수는 `.env` 파일을 통해 관리하고, `python-dotenv` 라이브러리로 로드\n\n**5. 멀티페이지 구조 구현:**\n    *   Streamlit의 멀티페이지 기능 활용하여 `pages/` 디렉토리에 각 페이지 구성\n    *   페이지 간 네비게이션을 위한 사이드바 메뉴 표준화\n\n**6. 컴포넌트 재사용성 확보:**\n    *   반복적으로 사용되는 UI 요소(예: 차트, 테이블, 사용자 정의 위젯)는 `components/` 디렉토리에 별도 파일로 분리하여 재사용\n\n**기술적 고려사항:**\n*   Streamlit 최신 버전의 컴포넌트 및 API 활용 (예: `st.chat_input`, `st.chat_message`)\n*   코드 포맷터(예: Black, Ruff) 및 린터(예: Ruff, Flake8)를 사용하여 코드 스타일 일관성 유지\n*   Streamlit Best Practices 문서 참조: [https://docs.streamlit.io/library/get-started/architecture](https://docs.streamlit.io/library/get-started/architecture), [https://docs.streamlit.io/library/advanced-features/session-state](https://docs.streamlit.io/library/advanced-features/session-state), [https://docs.streamlit.io/library/api-reference/layout](https://docs.streamlit.io/library/api-reference/layout)\n\n**참고:** Task 9에서 구현된 `app.py`의 기본 구조를 기반으로 리팩토링을 진행합니다. Task 10, 11, 13에서 진행된 시스템 통합 및 안정화 작업과 연계하여 구조를 개선합니다.",
         "testStrategy": "1. **구조 검증:**\n    *   프로젝트 디렉토리 구조가 `pages/`, `components/`, `core/` (또는 `utils/`) 패턴을 따르는지 확인합니다.\n    *   `app.py`가 메인 진입점 역할을 하거나 멀티페이지 설정을 올바르게 포함하는지 확인합니다.\n    *   `components/` 디렉토리에 분리된 UI 컴포넌트들이 정상적으로 import 및 렌더링되는지 확인합니다.\n\n2. **레이아웃 및 스타일 검증:**\n    *   하드코딩된 CSS가 제거되고 Streamlit 네이티브 레이아웃 컴포넌트(`st.container`, `st.columns` 등)로 대체되었는지 확인합니다.\n    *   사이드바가 `st.sidebar`를 통해 표준화되었는지, 재사용 가능한 컴포넌트로 분리되었는지 확인합니다.\n    *   앱의 전체적인 레이아웃이 의도한 대로 구성되었는지 시각적으로 검증합니다.\n\n3. **상태 관리 검증:**\n    *   `st.session_state`가 명확하게 정의되고 사용되는지 확인합니다.\n    *   상태 관리 로직이 별도의 함수나 클래스로 분리되어 코드 가독성이 향상되었는지 확인합니다.\n\n4. **설정 파일 검증:**\n    *   `.streamlit/config.toml` 파일이 존재하고 기본적인 설정이 포함되어 있는지 확인합니다.\n    *   `.env` 파일이 올바르게 로드되고 환경 변수가 애플리케이션에서 사용되는지 확인합니다.\n\n5. **멀티페이지 기능 검증:**\n    *   Streamlit 앱 실행 시 사이드바에 페이지 목록이 올바르게 표시되는지 확인합니다.\n    *   각 페이지 링크를 클릭했을 때 해당 페이지로 정상적으로 이동하는지 확인합니다.\n\n6. **컴포넌트 재사용성 검증:**\n    *   `components/` 디렉토리에 정의된 컴포넌트가 여러 페이지에서 성공적으로 재사용되는지 확인합니다.\n\n7. **회귀 테스트:**\n    *   리팩토링 이전의 주요 기능(파일 업로드, RAG 파이프라인 실행, 채팅 인터페이스 등)이 변경 후에도 정상적으로 작동하는지 확인합니다. (Task 9, 10, 11, 13의 테스트 전략 참조)",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           9,
           10,
@@ -334,8 +334,8 @@
             "title": "프로젝트 디렉토리 구조 표준화",
             "description": "Streamlit 앱의 각 페이지를 `pages/` 디렉토리에 분리하고, 재사용 가능한 UI 컴포넌트를 `components/`에, 핵심 로직과 유틸리티 함수를 `core/` 또는 `utils/`에 분리하여 프로젝트 구조를 체계화합니다.",
             "dependencies": [],
-            "details": "`pages/`에 페이지별 파일 생성 (예: `1_📊_Dashboard.py`), `components/`에 UI 컴포넌트 파일 생성 (예: `sidebar.py`), `core/` 또는 `utils/`에 비즈니스 로직 및 헬퍼 함수 분리. `app.py`는 메인 진입점으로 멀티페이지 설정 또는 라우팅 역할만 수행하도록 변경합니다.",
-            "status": "pending",
+            "details": "`pages/`에 페이지별 파일 생성 (예: `1_📊_Dashboard.py`), `components/`에 UI 컴포넌트 파일 생성 (예: `sidebar.py`), `core/` 또는 `utils/`에 비즈니스 로직 및 헬퍼 함수 분리. `app.py`는 메인 진입점으로 멀티페이지 설정 또는 라우팅 역할만 수행하도록 변경합니다.\n<info added on 2025-08-12T02:11:08.553Z>\n**Task 14.1 완료 확인:**\n\n표준 디렉토리 구조가 성공적으로 생성되었으며, 1,500줄 이상의 단일 파일이 모듈화되어 유지보수성과 확장성이 크게 향상되었습니다. 핵심 로직이 적절히 분리되고 패키지 구조가 체계화되어 다음 단계인 레이아웃 및 스타일 표준화 작업을 진행할 준비가 완료되었습니다.\n\n**다음 작업 준비사항:**\n- 기존 하드코딩된 CSS 스타일 식별 및 제거 대상 목록 작성 필요\n- Streamlit 네이티브 컴포넌트 및 테마 시스템 활용 방안 검토 필요\n- 반응형 레이아웃 구현을 위한 컨테이너 및 컬럼 구조 설계 필요\n</info added on 2025-08-12T02:11:08.553Z>",
+            "status": "done",
             "testStrategy": "프로젝트 구조가 표준화된 디렉토리 패턴을 따르는지 확인하고, 각 컴포넌트 및 페이지가 정상적으로 import 및 렌더링되는지 테스트합니다."
           },
           {
@@ -345,8 +345,8 @@
             "dependencies": [
               "14.1"
             ],
-            "details": "`st.markdown` 내 하드코딩 CSS 제거, 대신 `st.container`, `st.columns`, `st.expander` 등 Streamlit 네이티브 레이아웃 컴포넌트 사용. 사이드바는 `st.sidebar`로 표준화하고 재사용 가능한 컴포넌트로 분리합니다.",
-            "status": "pending",
+            "details": "`st.markdown` 내 하드코딩 CSS 제거, 대신 `st.container`, `st.columns`, `st.expander` 등 Streamlit 네이티브 레이아웃 컴포넌트 사용. 사이드바는 `st.sidebar`로 표준화하고 재사용 가능한 컴포넌트로 분리합니다.\n<info added on 2025-08-12T02:19:20.800Z>\n**Task 14.2 완료 보고:**\n\n**완료된 작업:**\n\n1. **하드코딩된 CSS 제거**\n   - 기존 100줄+ CSS 코드 완전 제거\n   - `unsafe_allow_html=True` 사용 제거\n   - 고정 레이아웃 CSS 스타일 제거\n\n2. **Streamlit 네이티브 컴포넌트 사용**\n   - `st.container()` - 메시지 영역 컨테이너화\n   - `st.columns()` - 버튼 레이아웃 표준화\n   - `st.tabs()` - 멀티 탭 인터페이스 구현\n   - `st.expander()` - 근거 미리보기 표준화\n   - `st.metric()` - 설정 정보 표시 표준화\n\n3. **컴포넌트 분리**\n   - `components/sidebar.py` - 사이드바 기능 분리\n   - `components/chat_interface.py` - 채팅 인터페이스 분리\n   - 재사용 가능한 컴포넌트 구조 구현\n\n4. **설정 파일 표준화**\n   - `.streamlit/config.toml` - Streamlit 설정 파일 생성\n   - 테마, 서버, 브라우저 설정 표준화\n   - 파일 업로드 크기 제한 설정\n\n5. **새로운 메인 앱 파일 생성**\n   - `app_refactored.py` - 리팩토링된 메인 앱\n   - 모듈화된 구조로 변경\n   - 탭 기반 인터페이스 구현\n   - 환경설정 탭 추가\n\n**주요 개선사항:**\n- 하드코딩된 CSS 완전 제거\n- Streamlit 네이티브 레이아웃 컴포넌트 사용\n- 컴포넌트 재사용성 확보\n- 설정 파일 표준화\n- 멀티 탭 인터페이스 구현\n- 모듈화된 구조로 변경\n\n**결과:**\n- 기존 1,500줄+ 단일 파일에서 UI 컴포넌트 분리\n- Streamlit 표준 권장사항 준수\n- 유지보수성 및 확장성 향상\n- 다음 단계(14.3) 진행 준비 완료\n</info added on 2025-08-12T02:19:20.800Z>",
+            "status": "done",
             "testStrategy": "하드코딩 CSS가 제거되었는지 확인하고, Streamlit 내장 레이아웃 컴포넌트가 올바르게 적용되어 UI가 일관되고 논리적으로 구성되었는지 검증합니다."
           },
           {
@@ -356,8 +356,8 @@
             "dependencies": [
               "14.1"
             ],
-            "details": "상태 관련 변수 및 로직을 `st.session_state`에 통합하고, 상태 변경 및 초기화 로직을 별도 모듈 또는 클래스에 분리하여 관리합니다.",
-            "status": "pending",
+            "details": "상태 관련 변수 및 로직을 `st.session_state`에 통합하고, 상태 변경 및 초기화 로직을 별도 모듈 또는 클래스에 분리하여 관리합니다.\n<info added on 2025-08-12T02:30:35.677Z>\n**✅ 작업 완료 - StateManager 클래스 기반 중앙화된 상태 관리 시스템 구현**\n\n**구현된 핵심 기능:**\n- StateManager 클래스 (`core/state_manager.py`) 생성으로 모든 상태 관리 로직 중앙화\n- 상태 키 상수 정의를 통한 오타 방지 및 일관성 확보\n- 메시지, 에이전트 그래프, 업로더 키, 웹검색, 로그 표시 등 모든 상태 관리 메서드 구현\n- 기존 컴포넌트들(`sidebar.py`, `chat_interface.py`)의 StateManager 사용 전환\n- 메인 앱에 세션 상태 모니터링 및 초기화 기능 추가\n- 로깅을 통한 상태 변경 추적 및 디버깅 기능 강화\n\n**개선된 상태 관리 구조:**\n- 직접적인 `st.session_state` 접근 제거\n- 타입 힌트를 통한 코드 안정성 향상\n- 클래스 메서드 기반의 체계적인 상태 관리\n- 환경설정 탭에서 실시간 상태 모니터링 가능\n- 상태 초기화 버튼으로 세션 리셋 기능 제공\n\n작업이 성공적으로 완료되어 다음 단계인 설정 파일 및 환경 변수 표준화(14.4) 진행 준비가 완료되었습니다.\n</info added on 2025-08-12T02:30:35.677Z>",
+            "status": "done",
             "testStrategy": "상태 변경이 의도대로 반영되는지, 복잡한 상태 로직이 별도 함수/클래스로 분리되어 유지보수가 용이한지 테스트합니다."
           },
           {
@@ -367,8 +367,8 @@
             "dependencies": [
               "14.1"
             ],
-            "details": "테마, 페이지 설정 등 전역 설정을 `.streamlit/config.toml`에 정의하고, API 키 등 민감 정보는 `.env` 파일에 저장 후 `python-dotenv`로 로드합니다.",
-            "status": "pending",
+            "details": "테마, 페이지 설정 등 전역 설정을 `.streamlit/config.toml`에 정의하고, API 키 등 민감 정보는 `.env` 파일에 저장 후 `python-dotenv`로 로드합니다.\n<info added on 2025-08-12T02:37:59.434Z>\n**✅ 작업 완료 - 환경 변수 표준화 및 검증 시스템 구축**\n\n**완료된 주요 작업:**\n\n1. **표준화된 환경 변수 템플릿 (`env.example`) 생성**\n   - 섹션별 구분으로 체계적 관리 (Azure OpenAI, 애플리케이션, RAG, 웹 검색, 개발/디버깅)\n   - 상세한 주석과 기본값, 유효 범위 명시\n   - 개발자 친화적인 설정 가이드 제공\n\n2. **Config 클래스 대폭 개선 (`core/config.py`)**\n   - 환경 변수 자동 로드 및 검증 기능 통합\n   - `validate_required_settings()` - 필수 설정 누락 감지\n   - `get_environment_info()` - 환경 정보 실시간 조회\n   - `print_config_summary()` - 설정 현황 요약 출력\n\n3. **환경 검증 유틸리티 (`utils/env_validator.py`) 신규 생성**\n   - `EnvironmentValidator` 클래스로 종합적인 환경 검증\n   - 자동 `.env` 파일 생성 기능\n   - 상세한 검증 보고서 및 설정 가이드 제공\n\n4. **메인 앱에 환경 검증 탭 추가**\n   - 실시간 환경 상태 모니터링 인터페이스\n   - 원클릭 `.env` 파일 생성 기능\n   - 사용자 친화적인 설정 가이드 제공\n\n**핵심 개선사항:**\n- 배포 환경별 설정 관리 표준화 완료\n- 환경 설정 오류 조기 감지 및 자동 안내 시스템 구축\n- 개발자 온보딩 프로세스 대폭 간소화\n- 프로덕션 배포 안정성 향상\n\n**다음 단계 준비 완료:** 멀티페이지 구조 구현을 위한 환경 기반 구축 완료\n</info added on 2025-08-12T02:37:59.434Z>",
+            "status": "done",
             "testStrategy": "설정 파일과 환경 변수 로드가 정상적으로 작동하는지, 설정 변경 시 앱에 올바르게 반영되는지 검증합니다."
           },
           {
@@ -380,15 +380,76 @@
               "14.2"
             ],
             "details": "각 페이지를 독립 파일로 구성하고, 사이드바 메뉴를 표준화하여 페이지 간 네비게이션을 구현합니다. 차트, 테이블, 사용자 정의 위젯 등 반복 UI는 컴포넌트로 분리합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "멀티페이지 네비게이션이 원활히 작동하는지, 컴포넌트가 재사용되어 일관된 UI를 제공하는지 테스트합니다."
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Streamlit 네이티브 컴포넌트 기반 UI/UX 개선",
+        "description": "AI 한국은행 경제 분석팀 앱의 UI/UX를 Streamlit 네이티브 컴포넌트를 최대한 활용하여 전면 개선합니다. 상세 연구 결과를 바탕으로 구체적인 구현 방안과 코드 예시가 포함된 체계적인 개선 작업을 진행합니다.",
+        "status": "pending",
+        "dependencies": [
+          14
+        ],
+        "priority": "high",
+        "details": "주요 개선 목표: 1. 채팅 입력창을 자연스러운 하단 위치로 이동 2. 제목을 컴팩트한 헤더로 변경하고 현재 상태 정보 통합 3. 초기화 과정을 채팅 영역 내 자연스러운 플로우로 통합 4. 분석 로그를 사이드바에서 제거하고 채팅 영역으로 이동 (확장 가능한 형태) 5. 사이드바를 파일 업로드 중심으로 간소화하여 공간 효율성 극대화\n\n**연구 결과 기반 구체적 구현 방안:**\n\n**1. 네이티브 컴포넌트 활용 전략:**\n- st.chat_message와 st.chat_input을 활용한 자연스러운 채팅 인터페이스 구현\n- st.session_state를 통한 상태 관리로 대화 히스토리 유지 및 UI 상태 동기화\n- st.columns와 st.container를 활용한 레이아웃 최적화\n- st.expander로 확장 가능한 UI 구현\n\n**2. 구현 우선순위 (복잡도 기준):**\n- 헤더 컴팩트화 (복잡도 3/10) - 가장 단순\n- 사이드바 간소화 (복잡도 4/10) - 중간 난이도\n- 입력창 하단 배치 (복잡도 5/10) - 레이아웃 조정\n- 채팅 영역 개선 (복잡도 6/10) - UI 흐름 설계\n- 분석 로그 이동 (복잡도 7/10) - 가장 복잡\n\n**3. 핵심 구현 코드 패턴:**\n```python\n# 하단 고정 입력창 구현\nchat_container = st.container()\ninput_container = st.container()\n\n# 헤더와 상태 정보 통합\ncol1, col2 = st.columns([3, 1])\nwith col1:\n    st.header(\"📊 AI 한국은행 경제 분석팀\")\nwith col2:\n    st.info(f\"💬 {len(st.session_state.get('messages', []))}개 메시지\")\n\n# 확장 가능한 분석 로그\nwith st.expander(\"📊 분석 로그 보기\", expanded=False):\n    for log in st.session_state.get('analysis_logs', []):\n        st.write(log)\n```\n\n**4. 주의사항:**\n- Streamlit의 재실행 특성을 고려한 상태 관리\n- 기존 기능 보존하면서 UX 개선\n- 네이티브 컴포넌트 우선 사용으로 유지보수성 확보\n- Task 14의 구조화된 components/ 폴더 활용으로 모듈화된 UI 컴포넌트 개발",
+        "testStrategy": "1. **기능 보존 검증:** 기존 채팅, 파일 업로드, 분석 기능이 모두 정상 작동하는지 확인\n2. **UI/UX 개선 검증:** 각 개선사항(헤더 컴팩트화, 입력창 하단 배치, 분석 로그 이동 등)이 올바르게 구현되었는지 확인\n3. **상태 관리 테스트:** st.session_state를 통한 대화 히스토리 및 UI 상태가 재실행 시에도 유지되는지 확인\n4. **반응형 레이아웃 테스트:** 다양한 화면 크기에서 레이아웃이 올바르게 표시되는지 확인\n5. **성능 테스트:** UI 개선 후 앱 로딩 속도 및 반응성이 유지되는지 확인\n6. **사용자 경험 테스트:** 실제 경제 분석 시나리오를 통한 전체 워크플로우 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "상단 헤더 컴팩트화 및 상태 정보 통합",
+            "description": "제목을 작은 크기로 변경하고 현재 상태 정보를 통합하여 상단 헤더를 개선합니다. (복잡도: 3/10)",
+            "status": "pending",
+            "dependencies": [],
+            "details": "1. st.title을 st.header로 변경하여 크기 축소\n2. st.columns([3, 1])을 활용하여 제목과 상태 정보를 나란히 배치\n3. 현재 상태 정보(메시지 수, 분석 진행 상태 등)를 st.info로 표시\n4. 기존 기능은 모두 보존하면서 시각적 개선\n\n**구현 코드 예시:**\n```python\ncol1, col2 = st.columns([3, 1])\nwith col1:\n    st.header(\"📊 AI 한국은행 경제 분석팀\")\nwith col2:\n    st.info(f\"💬 {len(st.session_state.get('messages', []))}개 메시지\")\n```",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "사이드바 간소화 및 파일 업로드 중심화",
+            "description": "사이드바에서 분석 로그를 제거하고 파일 업로드 기능만 남겨 공간 효율성을 극대화합니다. (복잡도: 4/10)",
+            "status": "pending",
+            "dependencies": [],
+            "details": "1. components/sidebar.py에서 분석 로그 관련 코드 제거\n2. 파일 업로드 기능을 사이드바의 주요 기능으로 강화\n3. st.expander를 활용하여 필요시 추가 정보 표시\n4. 공간 효율성을 위한 레이아웃 최적화\n5. 업로드된 파일 목록 및 상태를 간결하게 표시",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "채팅 영역 레이아웃 개선 및 초기화 과정 통합",
+            "description": "채팅 메시지와 초기화 과정을 하나의 자연스러운 플로우로 통합하여 사용자 경험을 개선합니다. (복잡도: 6/10)",
+            "status": "pending",
+            "dependencies": [],
+            "details": "1. 초기화 과정을 st.status에서 st.info 또는 st.warning으로 변경하여 채팅 영역에 통합\n2. st.container를 활용하여 채팅 메시지와 초기화 과정을 논리적으로 그룹화\n3. 스크롤 가능한 영역 내에서 자연스러운 정보 흐름 구현\n4. st.chat_message를 활용한 일관된 메시지 표시 방식 적용\n5. 기존 채팅 인터페이스 기능은 모두 보존",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "분석 로그 채팅 영역 이동 및 확장 가능 형태 구현",
+            "description": "사이드바에서 제거된 분석 로그를 채팅 영역으로 이동하여 확장 가능한 형태로 구현합니다. (복잡도: 7/10)",
+            "status": "pending",
+            "dependencies": [
+              2
+            ],
+            "details": "1. st.expander(\"📊 분석 로그 보기\", expanded=False)를 활용하여 접을 수 있는 형태로 구현\n2. 채팅 메시지와 함께 자연스럽게 표시되도록 배치\n3. 분석 진행 상황을 실시간으로 업데이트하는 기능 구현\n4. 사용자가 필요시에만 로그를 확인할 수 있도록 UX 개선\n5. st.session_state를 활용한 로그 데이터 관리\n\n**구현 코드 예시:**\n```python\nwith st.expander(\"📊 분석 로그 보기\", expanded=False):\n    for log in st.session_state.get('analysis_logs', []):\n        st.write(log)\n```",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "채팅 입력창 하단 배치 및 컨트롤 버튼 최적화",
+            "description": "채팅 입력창을 자연스러운 하단 위치로 이동하고 컨트롤 버튼과 함께 최적화합니다. (복잡도: 5/10)",
+            "status": "pending",
+            "dependencies": [],
+            "details": "1. st.chat_input을 활용하여 네이티브 채팅 입력창 구현\n2. st.container를 활용한 채팅 영역과 입력창 분리 배치\n3. 컨트롤 버튼(초기화, 새 질문 등)을 입력창 근처에 배치하여 사용성 향상\n4. st.columns를 활용하여 입력창과 버튼을 효율적으로 배치\n5. 기존 입력 기능은 모두 보존하면서 UX 개선\n\n**구현 코드 예시:**\n```python\nchat_container = st.container()\ninput_container = st.container()\n\nwith chat_container:\n    for msg in st.session_state.get('messages', []):\n        with st.chat_message(msg['role']):\n            st.write(msg['content'])\n\nwith input_container:\n    user_input = st.chat_input(\"질문을 입력하세요\")\n```",
+            "testStrategy": ""
           }
         ]
       }
     ],
     "metadata": {
       "created": "2025-08-11T04:36:34.710Z",
-      "updated": "2025-08-12T02:03:10.910Z",
+      "updated": "2025-08-12T04:49:47.799Z",
       "description": "Tasks for master context"
     }
   }
