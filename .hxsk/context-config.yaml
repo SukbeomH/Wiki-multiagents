@@ -1,0 +1,13 @@
+# HXSK Context Management Configuration
+cleanup:
+  archive_after_days: 30
+  max_patterns: 20
+  max_report_size_kb: 50
+
+patterns:
+  max_items: 20
+  max_size_bytes: 2048
+
+memories:
+  retention_days: 90
+  compact_after: 30
