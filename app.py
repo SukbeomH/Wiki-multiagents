@@ -230,15 +230,29 @@ def create_graph(llm, retriever):
             )
         )
     
+    # KOSIS 도구 추가 (API 키가 있을 경우만)
+    if Config.KOSIS_API_KEY:
+        from core.kosis_client import search_kosis
+        researcher_tools.append(
+            Tool(
+                name="kosis_statistics_search",
+                func=search_kosis,
+                description="KOSIS 국가통계포털에서 공식 통계 데이터를 검색합니다. 소비자물가지수, GDP, 실업률 등 한국 경제 통계를 조회할 때 사용하세요."
+            )
+        )
+        logger.info("[graph] KOSIS 검색 도구 추가 완료")
+
     researcher_system_prompt = """당신은 전문 경제 연구원입니다. 사용자의 요청에 따라 제공된 문서와 웹에서 정확하고 객관적인 정보를 찾아서 제공하는 역할을 합니다.
 
 **중요: 반드시 도구를 사용하세요!**
 - bok_document_search: PDF 문서나 한국은행 공식 문서 검색 (기본 검색)
 - web_search: 최신 경제 뉴스나 실시간 정보 검색
 - relaxed_document_search: 유사도 제한을 완화한 문서 검색 (기본 검색 실패 시)
+- kosis_statistics_search: KOSIS 국가통계포털 공식 통계 데이터 검색 (API 키 필요)
 
 **검색 전략:**
 1. **1단계: 기본 검색** - bok_document_search와 web_search를 사용하여 정확한 정보 검색
+1-1. **공식 통계** - 수치 데이터가 필요하면 kosis_statistics_search를 사용
 2. **2단계: 완화된 검색** - 기본 검색에서 정보를 찾지 못한 경우 relaxed_document_search 사용
 3. **결과 평가** - 검색 결과가 충분하지 않으면 더 넓은 범위에서 재검색
 

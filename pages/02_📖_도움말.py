@@ -189,6 +189,28 @@ def features_interface():
     - 기본적으로 활성화되어 있음
     """)
     
+    st.subheader("📊 공공 데이터 연동 (KOSIS)")
+
+    st.markdown("""
+    ### KOSIS 국가통계포털
+
+    **기능 설명:**
+    - KOSIS 국가통계포털에서 공식 통계 데이터를 직접 검색합니다
+    - 소비자물가지수, GDP, 실업률, 수출입 통계 등 한국 경제 지표 조회 가능
+
+    **사용 방법:**
+    - `.env`에 `KOSIS_API_KEY`를 설정하세요
+    - API 키 발급: [KOSIS 오픈 API](https://kosis.kr/openapi/)에서 무료 발급
+    - 설정 후 Researcher 에이전트가 자동으로 KOSIS 데이터를 활용합니다
+
+    **검색 가능한 통계:**
+    - 소비자물가지수 (CPI)
+    - 국내총생산 (GDP)
+    - 실업률, 고용률
+    - 수출입 통계
+    - 산업생산지수
+    """)
+
     st.subheader("📄 문서 관리")
     
     st.markdown("""
