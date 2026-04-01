@@ -219,8 +219,13 @@ class RAGPipeline:
             for pdf_path in pdf_files:
                 try:
                     loader = PyMuPDFLoader(pdf_path)
-                    all_docs.extend(loader.load())
-                    logger.info("[rag] 로드 완료: %s", os.path.basename(pdf_path))
+                    docs = loader.load()
+                    for doc in docs:
+                        doc.metadata["source_filename"] = os.path.basename(pdf_path)
+                        if "page" in doc.metadata:
+                            doc.metadata["page_number"] = doc.metadata["page"] + 1
+                    all_docs.extend(docs)
+                    logger.info("[rag] 로드 완료: %s (%d pages)", os.path.basename(pdf_path), len(docs))
                 except Exception as e:
                     logger.exception("[rag] 로드 실패: %s", os.path.basename(pdf_path))
                     st.sidebar.error(f"'{os.path.basename(pdf_path)}' 파일 로드 실패: {e}")
