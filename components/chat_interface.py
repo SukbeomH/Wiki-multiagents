@@ -44,10 +44,15 @@ def render_evidence_preview(final_response):
     """근거 미리보기를 렌더링합니다."""
     preview_sources = extract_preview_sources(final_response)
     if preview_sources:
-        with st.expander("📋 근거 미리보기", expanded=False):
-            st.markdown("**주요 근거 정보:**")
-            for i, source in enumerate(preview_sources[:3], 1):
-                st.markdown(f"**{i}.** {source}")
+        with st.expander("📋 출처 정보", expanded=True):
+            for i, source in enumerate(preview_sources, 1):
+                if source["type"] == "pdf":
+                    page_str = f" p.{source['page']}" if source.get("page") else ""
+                    st.markdown(f"**{i}.** 📄 {source['name']}{page_str}")
+                elif source["type"] == "web":
+                    st.markdown(f"**{i}.** 🌐 [{source['name']}]({source['name']})")
+                else:
+                    st.markdown(f"**{i}.** {source['name']}")
 
 
 def render_chat_interface():

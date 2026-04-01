@@ -99,33 +99,49 @@ def evaluate_evidence_quality(content: str, sources: List[Dict[str, str]]) -> Di
     }
 
 
-def extract_preview_sources(content: str) -> List[str]:
-    """응답 내용에서 근거 정보를 추출하여 미리보기용으로 반환합니다."""
-    
+def extract_preview_sources(content: str) -> List[Dict[str, str]]:
+    """응답 내용에서 출처 정보를 구조화하여 추출한다."""
     sources = []
-    
-    # 출처 정보 섹션 찾기
-    source_patterns = [
-        r'출처:\s*\[([^\]]+)\]\s*([^\n]+)',
-        r'근거:\s*([^\n]+)',
-        r'\[근거 및 출처\](.*?)(?=\n\[|\n$|$)',
-        r'출처 정보\](.*?)(?=\n\[|\n$|$)'
-    ]
-    
-    for pattern in source_patterns:
-        matches = re.findall(pattern, content, re.DOTALL | re.IGNORECASE)
-        for match in matches:
-            if isinstance(match, tuple):
-                source_text = ' '.join(match).strip()
-            else:
-                source_text = match.strip()
-            
-            if source_text and len(source_text) > 10:
-                # 텍스트 정리
-                source_text = re.sub(r'\s+', ' ', source_text)
-                source_text = source_text[:100] + "..." if len(source_text) > 100 else source_text
-                sources.append(source_text)
-    
-    # 중복 제거 및 상위 3개 반환
-    unique_sources = list(dict.fromkeys(sources))  # 순서 유지하면서 중복 제거
-    return unique_sources[:3] 
+
+    # [문서 N] filename.pdf (p.X) 패턴 매칭
+    doc_pattern = r'\[문서\s*\d+\]\s*([^\n(]+?)(?:\s*\(p\.(\d+)\))?'
+    for match in re.finditer(doc_pattern, content):
+        source_name = match.group(1).strip()
+        page = match.group(2)
+        sources.append({
+            "type": "pdf",
+            "name": source_name,
+            "page": page,
+        })
+
+    # URL 패턴 매칭
+    url_pattern = r'URL:\s*(https?://[^\s]+)'
+    for match in re.finditer(url_pattern, content):
+        sources.append({
+            "type": "web",
+            "name": match.group(1),
+            "page": None,
+        })
+
+    # 기존 출처 패턴 폴백
+    if not sources:
+        fallback_patterns = [
+            r'출처:\s*\[([^\]]+)\]\s*([^\n]+)',
+            r'근거:\s*([^\n]+)',
+        ]
+        for pattern in fallback_patterns:
+            for match in re.findall(pattern, content, re.IGNORECASE):
+                text = ' '.join(match).strip() if isinstance(match, tuple) else match.strip()
+                if text and len(text) > 10:
+                    sources.append({"type": "text", "name": text[:100], "page": None})
+
+    # 중복 제거
+    seen = set()
+    unique = []
+    for s in sources:
+        key = (s["name"], s.get("page"))
+        if key not in seen:
+            seen.add(key)
+            unique.append(s)
+
+    return unique[:5]
