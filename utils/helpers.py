@@ -104,7 +104,7 @@ def extract_preview_sources(content: str) -> List[Dict[str, str]]:
     sources = []
 
     # [문서 N] filename.pdf (p.X) 패턴 매칭
-    doc_pattern = r'\[문서\s*\d+\]\s*([^\n(]+?)(?:\s*\(p\.(\d+)\))?'
+    doc_pattern = r'\[문서\s*\d+\]\s*([^\n(]+?)(?:\s*\(p\.(\d+)\))?\s*\n'
     for match in re.finditer(doc_pattern, content):
         source_name = match.group(1).strip()
         page = match.group(2)

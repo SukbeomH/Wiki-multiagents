@@ -47,7 +47,6 @@ class Config:
     # KOSIS (통계청) 설정
     # ==============================================================================
     KOSIS_API_KEY = os.getenv("KOSIS_API_KEY", "")
-    KOSIS_BASE_URL = "https://kosis.kr/openapi/Param/statisticsParameterData.do"
 
     # ==============================================================================
     # 웹 검색 설정

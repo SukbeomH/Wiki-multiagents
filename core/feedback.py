@@ -53,8 +53,11 @@ def get_feedback_stats() -> dict:
     with open(FEEDBACK_FILE, "r", encoding="utf-8") as f:
         for line in f:
             if line.strip():
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
                 total += 1
-                record = json.loads(line)
                 if record.get("rating") == 1:
                     positive += 1
 
