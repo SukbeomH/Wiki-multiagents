@@ -644,7 +644,24 @@ def main_chat_interface():
 
                 st.write(final_response)
                 logger.info("[run] 최종 응답 길이=%d", len(final_response))
-                
+
+                # 피드백 위젯
+                from core.feedback import save_feedback
+                feedback_key = f"feedback_{StateManager.get_feedback_index()}"
+                feedback_val = st.feedback("thumbs", key=feedback_key)
+                if feedback_val is not None:
+                    last_query = ""
+                    for msg in reversed(StateManager.get_messages()):
+                        if msg["role"] == "user":
+                            last_query = msg["content"]
+                            break
+                    save_feedback(last_query, final_response, feedback_val)
+                    StateManager.increment_feedback_index()
+                    if feedback_val == 1:
+                        st.toast("감사합니다! 피드백이 저장되었습니다.", icon="👍")
+                    else:
+                        st.toast("피드백이 저장되었습니다. 개선에 참고하겠습니다.", icon="📝")
+
                 # 어시스턴트 메시지 추가
                 StateManager.add_message("assistant", final_response)
 

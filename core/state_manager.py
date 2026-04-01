@@ -17,6 +17,7 @@ class StateManager:
     MESSAGES = "messages"
     WEB_SEARCH_ENABLED = "web_search_enabled"
     SHOW_LOGS = "show_logs"
+    FEEDBACK_INDEX = "feedback_index"
     
     @classmethod
     def initialize_session_state(cls):
@@ -33,11 +34,14 @@ class StateManager:
         if cls.MESSAGES not in st.session_state:
             st.session_state[cls.MESSAGES] = [
                 {
-                    "role": "assistant", 
+                    "role": "assistant",
                     "content": "안녕하세요! 저는 경제 분석을 돕는 AI 분석팀입니다. 무엇이 궁금하신가요?"
                 }
             ]
-        
+
+        if cls.FEEDBACK_INDEX not in st.session_state:
+            st.session_state[cls.FEEDBACK_INDEX] = 0
+
         logger.info("[state] 세션 상태 초기화 완료")
     
     @classmethod
@@ -136,6 +140,16 @@ class StateManager:
         current = cls.get_show_logs()
         cls.set_show_logs(not current)
     
+    @classmethod
+    def get_feedback_index(cls) -> int:
+        """피드백 위젯 키 인덱스를 반환합니다."""
+        return st.session_state.get(cls.FEEDBACK_INDEX, 0)
+
+    @classmethod
+    def increment_feedback_index(cls):
+        """피드백 위젯 키 인덱스를 증가시킵니다."""
+        st.session_state[cls.FEEDBACK_INDEX] = cls.get_feedback_index() + 1
+
     @classmethod
     def get_session_info(cls) -> Dict[str, Any]:
         """세션 정보를 반환합니다."""

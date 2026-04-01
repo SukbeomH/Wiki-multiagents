@@ -16,16 +16,19 @@ def main():
     st.markdown("애플리케이션의 설정을 관리합니다.")
     
     # 탭 생성
-    tab1, tab2, tab3 = st.tabs(["🔧 기본 설정", "🔍 환경 검증", "📊 상태 정보"])
-    
+    tab1, tab2, tab3, tab4 = st.tabs(["🔧 기본 설정", "🔍 환경 검증", "📊 상태 정보", "📊 피드백 통계"])
+
     with tab1:
         basic_settings_interface()
-    
+
     with tab2:
         environment_validation_interface()
-    
+
     with tab3:
         state_info_interface()
+
+    with tab4:
+        feedback_stats_interface()
 
 
 def basic_settings_interface():
@@ -196,6 +199,22 @@ def state_info_interface():
                 st.success(f"🤖 어시스턴트 {i}: {content}")
             else:
                 st.warning(f"❓ 알 수 없음 {i}: {content}")
+
+
+def feedback_stats_interface():
+    """피드백 통계 인터페이스"""
+    st.header("📊 피드백 통계")
+    from core.feedback import get_feedback_stats
+    stats = get_feedback_stats()
+    if stats["total"] > 0:
+        col1, col2, col3 = st.columns(3)
+        col1.metric("전체", stats["total"])
+        col2.metric("👍 긍정", stats["positive"])
+        col3.metric("👎 부정", stats["negative"])
+        ratio = stats["positive"] / stats["total"] * 100
+        st.progress(ratio / 100, text=f"긍정률: {ratio:.0f}%")
+    else:
+        st.info("아직 수집된 피드백이 없습니다.")
 
 
 if __name__ == "__main__":
