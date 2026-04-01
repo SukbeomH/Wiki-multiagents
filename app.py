@@ -17,6 +17,7 @@ from langchain_core.tools import Tool
 
 # 분리된 모듈들 import
 from core import Config, logger, AzureModelFactory, web_search_func, build_rag_pipeline
+from core.citation import wrap_retriever_with_citation
 from core.state_manager import StateManager
 from utils import setup_environment, EnvironmentValidator
 from components.sidebar import render_sidebar
@@ -196,8 +197,16 @@ def create_graph(llm, retriever):
     
     # 기본 검색 도구
     researcher_tools = [
-        Tool(name="bok_document_search", func=retriever.invoke, description="사용자가 업로드한 PDF 문서나 한국은행 공식 문서를 검색하여 특정 경제 용어, 정책, 보고서 내용을 찾습니다."),
-        Tool(name="web_search", func=web_search_func, description="최신 경제 뉴스나 실시간 시장 반응 등 현재 정보를 위해 웹을 검색합니다.")
+        Tool(
+            name="bok_document_search",
+            func=wrap_retriever_with_citation(retriever),
+            description="사용자가 업로드한 PDF 문서나 한국은행 공식 문서를 검색하여 특정 경제 용어, 정책, 보고서 내용을 찾습니다. 결과에 문서명과 페이지 번호가 포함됩니다."
+        ),
+        Tool(
+            name="web_search",
+            func=web_search_func,
+            description="최신 경제 뉴스나 실시간 시장 반응 등 현재 정보를 위해 웹을 검색합니다."
+        ),
     ]
     
     # 완화된 검색 도구 (RAG 파이프라인에서 생성)
@@ -214,7 +223,11 @@ def create_graph(llm, retriever):
     # 완화된 검색 도구가 있으면 추가
     if relaxed_retriever:
         researcher_tools.append(
-            Tool(name="relaxed_document_search", func=relaxed_retriever.invoke, description="유사도 제한을 완화하여 더 넓은 범위에서 관련 문서를 검색합니다. 기본 검색에서 정보를 찾지 못했을 때 사용하세요.")
+            Tool(
+                name="relaxed_document_search",
+                func=wrap_retriever_with_citation(relaxed_retriever),
+                description="유사도 제한을 완화하여 더 넓은 범위에서 관련 문서를 검색합니다. 결과에 문서명과 페이지 번호가 포함됩니다."
+            )
         )
     
     researcher_system_prompt = """당신은 전문 경제 연구원입니다. 사용자의 요청에 따라 제공된 문서와 웹에서 정확하고 객관적인 정보를 찾아서 제공하는 역할을 합니다.
