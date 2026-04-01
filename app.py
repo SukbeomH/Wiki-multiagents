@@ -303,7 +303,23 @@ def create_graph(llm, retriever):
 **인용 필수:**
 - 모든 분석은 반드시 근거를 제시해야 합니다
 - Researcher가 제공한 출처 정보를 활용하세요
-- 출처 없이 추측이나 의견만으로 분석하지 마세요"""
+- 출처 없이 추측이나 의견만으로 분석하지 마세요
+
+**수치 데이터 시각화:**
+분석에 시계열, 비교, 추이 등 수치 데이터가 포함되면 아래 형식으로 차트 데이터를 함께 출력하세요:
+
+```chart_data
+{
+  "title": "차트 제목",
+  "type": "line|bar|scatter",
+  "x": ["label1", "label2"],
+  "y": [value1, value2],
+  "x_label": "X축 레이블",
+  "y_label": "Y축 레이블"
+}
+```
+
+수치 데이터가 없거나 시각화가 불필요한 경우에는 chart_data 블록을 생략하세요."""
 
     analyst_agent = create_agent(
         llm,
@@ -312,17 +328,44 @@ def create_graph(llm, retriever):
         use_react=False,
     )
     
-    logger.info("[graph] 노드 생성: researcher, analyst, supervisor")
+    logger.info("[graph] 노드 생성: researcher, analyst, chart_processor, supervisor")
+
+    # chart_processor 노드: Analyst 응답에서 chart_data를 추출하여 차트 생성
+    from core.chart_generator import extract_chart_data, create_chart
+
+    def chart_processor_node(state):
+        """Analyst 응답에서 chart_data를 추출하고 차트를 생성한다."""
+        messages = state.get("messages", [])
+        if not messages:
+            return {"messages": []}
+
+        last_msg = messages[-1]
+        content = getattr(last_msg, "content", "") or ""
+        if isinstance(last_msg, dict):
+            content = last_msg.get("content", "")
+
+        chart_data = extract_chart_data(content)
+        if chart_data:
+            fig = create_chart(chart_data)
+            if fig:
+                if "pending_charts" not in st.session_state:
+                    st.session_state["pending_charts"] = []
+                st.session_state["pending_charts"].append(fig)
+                logger.info("[chart] 차트를 pending_charts에 추가")
+
+        return {"messages": []}
 
     workflow = StateGraph(AgentState)
     workflow.add_node("researcher", lambda state: agent_node(state, researcher_agent, "researcher"))
     workflow.add_node("analyst", lambda state: agent_node(state, analyst_agent, "analyst"))
-    
+    workflow.add_node("chart_processor", chart_processor_node)
+
     supervisor_chain = create_supervisor(llm, ["researcher", "analyst"])
     workflow.add_node("supervisor", supervisor_chain)
 
     workflow.add_edge("researcher", "supervisor")
-    workflow.add_edge("analyst", END)
+    workflow.add_edge("analyst", "chart_processor")
+    workflow.add_edge("chart_processor", END)
     
     def route_action(state):
         messages = state["messages"]
@@ -634,7 +677,13 @@ def main_chat_interface():
                         
                         # 근거 미리보기 표시
                         render_evidence_preview(final_response)
-                        
+
+                        # 차트 렌더링
+                        if "pending_charts" in st.session_state and st.session_state["pending_charts"]:
+                            for fig in st.session_state["pending_charts"]:
+                                st.plotly_chart(fig, use_container_width=True)
+                            st.session_state["pending_charts"] = []
+
                         # 분석 완료 메시지
                         st.success("✅ 분석 완료!")
                         
