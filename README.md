@@ -7,7 +7,7 @@
 ### 🎯 주요 특징
 
 - **🧠 멀티 에이전트 협업**: Supervisor-Worker 아키텍처로 전문적인 경제 분석
-- **📚 고급 RAG 시스템**: FAISS + MultiQueryRetriever로 정확한 정보 검색
+- **📚 고급 RAG 시스템**: FAISS + MMR/유사도 검색으로 정확한 정보 검색
 - **🌐 실시간 웹 검색**: 최신 경제 정보 수집 및 분석
 - **📱 현대적 UI/UX**: Streamlit 네이티브 컴포넌트 우선 사용으로 안정적이고 일관된 인터페이스
 - **⚙️ 모듈화된 아키텍처**: 유지보수성과 확장성을 고려한 체계적 구조
@@ -18,7 +18,7 @@
 - **AI Agent Framework**: LangChain, LangGraph (v0.2.x / v0.3.x 호환)
 - **LLM**: Azure OpenAI Service (GPT-4o)
 - **UI/UX**: Streamlit (멀티페이지 구조)
-- **RAG**: FAISS VectorStore, MultiQueryRetriever, ContextualCompressionRetriever, 동적 PDF 로딩
+- **RAG**: FAISS VectorStore, MMR/유사도 검색, ContextualCompressionRetriever, 동적 PDF 로딩
 - **웹 검색**: DDGS (DuckDuckGo Search) - SSL 인증서 오류 해결
 - **검색 전략**: MMR (Maximum Marginal Relevance) + 완화된 유사도 검색
 
@@ -57,7 +57,7 @@ graph TD
 - **🧠 Supervisor (감독관)**: 전체 분석 계획 수립 및 워크플로우 관리
   - 라우팅 규칙: `ROUTE: researcher` | `ROUTE: analyst` | `ROUTE: END`
   - 최종 답변: `Final Answer: ...` 형식으로 직접 제공
-- **🔍 Researcher (연구원)**: MultiQueryRetriever 기반 RAG와 웹 검색으로 사실 기반 데이터 수집
+- **🔍 Researcher (연구원)**: MMR 기반 RAG와 웹 검색으로 사실 기반 데이터 수집
 - **✍️ Analyst (분석가)**: 수집된 데이터를 바탕으로 경제 현상 심층 분석 및 통찰 제공
 
 ## 📁 프로젝트 구조
@@ -141,12 +141,10 @@ AOAI_DEPLOY_EMBEDDING_3_LARGE="YOUR_EMBEDDING_DEPLOYMENT_NAME"
 LOG_LEVEL=INFO
 
 # RAG 설정 (선택)
-RAG_CHUNK_SIZE=1000
-RAG_CHUNK_OVERLAP=200
-RAG_SEARCH_STRATEGY=MMR
+RAG_SEARCH_STRATEGY=mmr
 RAG_K=5
 RAG_FETCH_K=20
-RAG_LAMBDA_MULT=0.5
+RAG_LAMBDA_MULT=0.7
 
 # 웹 검색 설정 (선택)
 # 기본 검색 엔진을 사용합니다.
@@ -188,7 +186,7 @@ uv run streamlit run app.py
 ## 🔧 주요 기능
 
 ### 1. 고급 RAG 시스템
-- **MultiQueryRetriever**: 단일 질문을 다각도로 재구성하여 검색 성능 극대화
+- **MMR (Maximum Marginal Relevance)**: 관련성과 다양성을 균형 잡아 검색 성능 극대화
 - **동적 PDF 관리**: 업로드된 PDF를 자동으로 RAG 파이프라인에 반영
 - **완화된 검색 전략**: 기본 검색 실패 시 더 넓은 범위에서 재검색
 - **컨텍스트 압축**: LLMChainExtractor를 통한 관련성 높은 정보 추출

@@ -59,7 +59,7 @@ class StateManager:
             "role": role,
             "content": content
         })
-        logger.info(f"[state] 메시지 추가: {role} ({len(content)}자)")
+        logger.info("[state] 메시지 추가: %s (%d자)", role, len(content))
     
     @classmethod
     def clear_messages(cls):
@@ -83,7 +83,7 @@ class StateManager:
         st.session_state[cls.AGENT_GRAPH] = graph
         if version:
             st.session_state[cls.AGENT_GRAPH_VERSION] = version
-        logger.info(f"[state] 에이전트 그래프 설정: version={version}")
+        logger.info("[state] 에이전트 그래프 설정: version=%s", version)
     
     @classmethod
     def is_agent_graph_valid(cls) -> bool:
@@ -110,7 +110,7 @@ class StateManager:
         """업로더 키를 증가시킵니다."""
         current_key = st.session_state.get(cls.UPLOADER_KEY, 0)
         st.session_state[cls.UPLOADER_KEY] = current_key + 1
-        logger.info(f"[state] 업로더 키 증가: {current_key} -> {current_key + 1}")
+        logger.info("[state] 업로더 키 증가: %d -> %d", current_key, current_key + 1)
     
     @classmethod
     def get_web_search_enabled(cls) -> bool:
@@ -121,7 +121,7 @@ class StateManager:
     def set_web_search_enabled(cls, enabled: bool):
         """웹검색 활성화 상태를 설정합니다."""
         st.session_state[cls.WEB_SEARCH_ENABLED] = enabled
-        logger.info(f"[state] 웹검색 상태 변경: {enabled}")
+        logger.info("[state] 웹검색 상태 변경: %s", enabled)
     
     @classmethod
     def get_show_logs(cls) -> bool:
@@ -132,7 +132,7 @@ class StateManager:
     def set_show_logs(cls, show: bool):
         """로그 표시 상태를 설정합니다."""
         st.session_state[cls.SHOW_LOGS] = show
-        logger.info(f"[state] 로그 표시 상태 변경: {show}")
+        logger.info("[state] 로그 표시 상태 변경: %s", show)
     
     @classmethod
     def toggle_show_logs(cls):
