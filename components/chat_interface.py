@@ -42,13 +42,21 @@ def render_chat_messages():
 
 def render_evidence_preview(final_response):
     """근거 미리보기를 렌더링합니다."""
+    from components.common import render_pdf_page
     preview_sources = extract_preview_sources(final_response)
     if preview_sources:
         with st.expander("📋 출처 정보", expanded=True):
             for i, source in enumerate(preview_sources, 1):
                 if source["type"] == "pdf":
                     page_str = f" p.{source['page']}" if source.get("page") else ""
-                    st.markdown(f"**{i}.** 📄 {source['name']}{page_str}")
+                    col1, col2 = st.columns([4, 1])
+                    with col1:
+                        st.markdown(f"**{i}.** 📄 {source['name']}{page_str}")
+                    with col2:
+                        if source.get("page"):
+                            btn_key = f"pdf_view_{i}_{source['name']}_{source['page']}"
+                            if st.button("📖 보기", key=btn_key):
+                                render_pdf_page(source["name"], int(source["page"]))
                 elif source["type"] == "web":
                     st.markdown(f"**{i}.** 🌐 [{source['name']}]({source['name']})")
                 else:

@@ -109,11 +109,17 @@ def render_sidebar():
         st.header("📚 현재 참고 자료")
         pdf_files_in_data = glob.glob(os.path.join(Config.DATA_DIR, "*.pdf"))
         if pdf_files_in_data:
-            # 스크롤 가능한 컨테이너
             with st.container():
                 st.write(f"**총 {len(pdf_files_in_data)}개 파일:**")
-                for f in pdf_files_in_data:
-                    st.write(f"• {os.path.basename(f)}")
+                for f_path in pdf_files_in_data:
+                    fname = os.path.basename(f_path)
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.write(f"• {fname}")
+                    with col2:
+                        if st.button("📖", key=f"sidebar_pdf_{fname}", help=f"{fname} 미리보기"):
+                            from components.common import render_pdf_page
+                            render_pdf_page(fname)
         else:
             st.info("업로드된 파일이 없습니다. 기본 데이터로 분석합니다.")
         

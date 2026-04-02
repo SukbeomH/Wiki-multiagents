@@ -66,4 +66,24 @@ def render_feature_card(title: str, description: str):
     st.write(description)
 
 
-# 사용하지 않는 함수들 제거됨
+def render_pdf_page(filename: str, page: int = 1, height: int = 500):
+    """PDF 파일의 특정 페이지를 iframe으로 렌더링한다."""
+    import base64
+    import os
+    import streamlit.components.v1 as components
+    from core.config import Config
+
+    pdf_path = os.path.join(Config.DATA_DIR, filename)
+    if not os.path.exists(pdf_path):
+        st.warning(f"파일을 찾을 수 없습니다: {filename}")
+        return
+
+    with open(pdf_path, "rb") as f:
+        pdf_bytes = f.read()
+
+    b64 = base64.b64encode(pdf_bytes).decode("utf-8")
+    pdf_url = f"data:application/pdf;base64,{b64}#page={page}"
+    components.html(
+        f'<iframe src="{pdf_url}" width="100%" height="{height}" type="application/pdf"></iframe>',
+        height=height + 10,
+    )
