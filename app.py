@@ -6,7 +6,7 @@ import os
 import hashlib
 import streamlit as st
 from typing import TypedDict, Annotated, List
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 # LangGraph 관련
 from langgraph.graph import StateGraph, END
@@ -538,10 +538,24 @@ def main_chat_interface():
                     
                     final_response = ""
                     accumulated_messages = []
-                    
+
+                    # 대화 히스토리를 LangChain 메시지로 변환
+                    history_messages = []
+                    for msg in StateManager.get_messages()[:-1]:  # 마지막(현재) 메시지 제외
+                        if msg["role"] == "user":
+                            history_messages.append(HumanMessage(content=msg["content"]))
+                        elif msg["role"] == "assistant":
+                            history_messages.append(AIMessage(content=msg["content"]))
+
+                    # 최근 N턴만 포함 (토큰 제한 방지)
+                    if len(history_messages) > Config.MAX_HISTORY_TURNS * 2:
+                        history_messages = history_messages[-(Config.MAX_HISTORY_TURNS * 2):]
+
+                    all_messages = history_messages + [HumanMessage(content=prompt)]
+
                     for chunk in StateManager.get_agent_graph().stream(
-                        {"messages": [HumanMessage(content=prompt)]}, 
-                        config={"recursion_limit": Config.MAX_ITERATIONS}, 
+                        {"messages": all_messages},
+                        config={"recursion_limit": Config.MAX_ITERATIONS},
                         stream_mode="updates"
                     ):
                         logger.debug("[run] chunk=%s", chunk)

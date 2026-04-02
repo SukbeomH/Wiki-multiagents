@@ -32,6 +32,7 @@ class Config:
     APP_GRAPH_VERSION = os.getenv("APP_GRAPH_VERSION", "3")
     MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS", "10"))
     TIMEOUT_SECONDS = int(os.getenv("TIMEOUT_SECONDS", "300"))
+    MAX_HISTORY_TURNS = int(os.getenv("MAX_HISTORY_TURNS", "6"))
     
     # ==============================================================================
     # RAG 설정
