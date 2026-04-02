@@ -742,6 +742,27 @@ def main_chat_interface():
                 st.write(final_response)
                 logger.info("[run] 최종 응답 길이=%d", len(final_response))
 
+                # 보고서 다운로드 버튼
+                from core.report_generator import generate_report
+                from utils.helpers import extract_preview_sources
+                import re as _re
+                report_sources = extract_preview_sources(final_response)
+                chart_titles = [m.group(1) for m in _re.finditer(r'"title":\s*"([^"]+)"', final_response)]
+                last_query_for_report = ""
+                for msg in reversed(StateManager.get_messages()):
+                    if msg["role"] == "user":
+                        last_query_for_report = msg["content"]
+                        break
+                report_md = generate_report(last_query_for_report, final_response, report_sources, chart_titles or None)
+                report_timestamp = __import__("time").strftime("%Y%m%d_%H%M%S")
+                st.download_button(
+                    label="📥 보고서 다운로드",
+                    data=report_md,
+                    file_name=f"경제분석보고서_{report_timestamp}.md",
+                    mime="text/markdown",
+                    key=f"report_dl_{StateManager.get_feedback_index()}",
+                )
+
                 # 피드백 위젯
                 from core.feedback import save_feedback
                 feedback_key = f"feedback_{StateManager.get_feedback_index()}"
