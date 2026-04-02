@@ -337,6 +337,22 @@ def create_graph(llm, retriever):
 }
 ```
 
+여러 지표를 비교할 때는 series를 사용하세요:
+
+```chart_data
+{
+  "title": "경제지표 비교",
+  "type": "line",
+  "x": ["Q1", "Q2", "Q3"],
+  "series": [
+    {"name": "GDP", "y": [2.1, 2.3, 2.0]},
+    {"name": "CPI", "y": [3.2, 2.8, 2.5]}
+  ],
+  "x_label": "분기",
+  "y_label": "%"
+}
+```
+
 수치 데이터가 없거나 시각화가 불필요한 경우에는 chart_data 블록을 생략하세요."""
 
     analyst_agent = create_agent(

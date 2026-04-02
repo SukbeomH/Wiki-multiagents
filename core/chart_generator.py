@@ -37,26 +37,41 @@ def extract_chart_data(text: str) -> Optional[dict]:
 
 
 def create_chart(data: dict) -> Optional[go.Figure]:
-    """파싱된 데이터로 plotly Figure를 생성한다."""
+    """파싱된 데이터로 plotly Figure를 생성한다. 단일시리즈/멀티시리즈 모두 지원."""
     chart_type = data.get("type", "line")
     title = data.get("title", "")
     x = data.get("x", [])
-    y = data.get("y", [])
     x_label = data.get("x_label", "")
     y_label = data.get("y_label", "")
 
-    if not x or not y:
-        logger.warning("[chart] x 또는 y 데이터가 비어있음")
+    # 멀티시리즈 또는 단일시리즈 판별
+    series_list = data.get("series")
+    if not series_list:
+        # 단일시리즈 (하위 호환)
+        y = data.get("y", [])
+        if not x or not y:
+            logger.warning("[chart] x 또는 y 데이터가 비어있음")
+            return None
+        series_list = [{"name": title, "y": y}]
+
+    if not x:
+        logger.warning("[chart] x 데이터가 비어있음")
         return None
 
     fig = go.Figure()
 
-    if chart_type == "bar":
-        fig.add_trace(go.Bar(x=x, y=y, name=title))
-    elif chart_type == "scatter":
-        fig.add_trace(go.Scatter(x=x, y=y, mode="markers", name=title))
-    else:  # default: line
-        fig.add_trace(go.Scatter(x=x, y=y, mode="lines+markers", name=title))
+    for series in series_list:
+        name = series.get("name", "")
+        y = series.get("y", [])
+        if not y:
+            continue
+
+        if chart_type == "bar":
+            fig.add_trace(go.Bar(x=x, y=y, name=name))
+        elif chart_type == "scatter":
+            fig.add_trace(go.Scatter(x=x, y=y, mode="markers", name=name))
+        else:
+            fig.add_trace(go.Scatter(x=x, y=y, mode="lines+markers", name=name))
 
     fig.update_layout(
         title=title,
@@ -64,5 +79,5 @@ def create_chart(data: dict) -> Optional[go.Figure]:
         yaxis_title=y_label,
         template="plotly_white",
     )
-    logger.info("[chart] 차트 생성 완료: %s", title)
+    logger.info("[chart] 차트 생성 완료: %s (%d series)", title, len(series_list))
     return fig
